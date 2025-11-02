@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Organizer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.6.2/fuse.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --bg-tertiary: #e8e8e8;
+            --text-primary: #222222;
+            --text-secondary: #666666;
+            --accent: #4a90e2;
+            --accent-hover: #357abd;
+            --border: #dddddd;
+            --success: #4caf50;
+            --warning: #ff9800;
+            --danger: #f44336;
+        }
+
+        body.dark-mode {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #252525;
+            --bg-tertiary: #303030;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --border: #404040;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .app-container {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            grid-template-rows: 60px 1fr;
+            height: 100vh;
+        }
+
+        .top-nav {
+            grid-column: 1 / -1;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            background: var(--accent);
+            color: white;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.85rem;
+        }
+
+        .sidebar {
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .sidebar-item {
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-bottom: 5px;
+        }
+
+        .sidebar-item:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .sidebar-item.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        .main-content {
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .search-bar {
+            width: 100%;
+            max-width: 600px;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            margin-bottom: 20px;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+        }
+
+        .card h3 {
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+
+        .card-content {
+            color: var(--text-secondary);
+            margin: 10px 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+        }
+
+        .task-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            gap: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .task-item:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .priority-high { border-left: 4px solid var(--danger); }
+        .priority-medium { border-left: 4px solid var(--warning); }
+        .priority-low { border-left: 4px solid var(--success); }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-primary);
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        .form-group textarea {
+            min-height: 150px;
+        }
+
+        [contenteditable] {
+            border: 1px solid var(--border);
+            padding: 15px;
+            border-radius: 6px;
+            min-height: 200px;
+            background: var(--bg-secondary);
+        }
+
+        .tag {
+            background: var(--accent);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            display: inline-block;
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="top-nav">
+            <h1>📋 Universal Organizer</h1>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary btn-small" onclick="window.toggleTheme()">🌓</button>
+                <button class="btn btn-secondary btn-small" onclick="window.exportData()">💾 Export</button>
+                <button class="btn btn-secondary btn-small" onclick="window.importData()">📥 Import</button>
+                <button class="btn btn-small" onclick="window.openSettings()">⚙️</button>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <h3 style="margin-bottom: 10px; font-size: 0.85rem; text-transform: uppercase; color: var(--text-secondary);">Modules</h3>
+            <div class="sidebar-item active" onclick="window.switchView('notes')">📝 Notes</div>
+            <div class="sidebar-item" onclick="window.switchView('tasks')">✓ Tasks</div>
+            <div class="sidebar-item" onclick="window.switchView('calendar')">📅 Calendar</div>
+            <div class="sidebar-item" onclick="window.switchView('bookmarks')">🔖 Bookmarks</div>
+            <h3 style="margin: 20px 0 10px 0; font-size: 0.85rem; text-transform: uppercase; color: var(--text-secondary);">Actions</h3>
+            <div class="sidebar-item" onclick="window.createNew()">➕ Create New</div>
+        </div>
+
+        <div class="main-content">
+            <input type="text" class="search-bar" id="searchBar" placeholder="Search everything...">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 id="viewTitle">Notes</h2>
+                <button class="btn" onclick="window.createNew()">+ New</button>
+            </div>
+            <div class="grid-container" id="contentGrid"></div>
+        </div>
+    </div>
+
+    <div class="modal" id="itemModal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                <h3 id="modalTitle">New Note</h3>
+                <button style="border: none; background: none; font-size: 1.5rem; cursor: pointer; color: var(--text-primary);" onclick="window.closeModal()">&times;</button>
+            </div>
+            <form id="itemForm" onsubmit="return false;">
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" id="itemTitle" required>
+                </div>
+                <div class="form-group" id="contentGroup">
+                    <label>Content</label>
+                    <div id="itemContent" contenteditable="true"></div>
+                </div>
+                <div class="form-group" id="descriptionGroup" style="display:none">
+                    <label>Description</label>
+                    <textarea id="itemDescription"></textarea>
+                </div>
+                <div class="form-group" id="urlGroup" style="display:none">
+                    <label>URL</label>
+                    <input type="url" id="itemUrl">
+                </div>
+                <div class="form-group" id="dueDateGroup" style="display:none">
+                    <label>Due Date</label>
+                    <input type="datetime-local" id="itemDueDate">
+                </div>
+                <div class="form-group" id="priorityGroup" style="display:none">
+                    <label>Priority</label>
+                    <select id="itemPriority">
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+                <div class="form-group" id="startDateGroup" style="display:none">
+                    <label>Start Date</label>
+                    <input type="datetime-local" id="itemStartDate">
+                </div>
+                <div class="form-group" id="endDateGroup" style="display:none">
+                    <label>End Date</label>
+                    <input type="datetime-local" id="itemEndDate">
+                </div>
+                <div class="form-group">
+                    <label>Tags (comma-separated)</label>
+                    <input type="text" id="itemTags">
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="window.closeModal()">Cancel</button>
+                    <button type="button" class="btn" onclick="window.saveItem()">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                <h3>Settings</h3>
+                <button style="border: none; background: none; font-size: 1.5rem; cursor: pointer; color: var(--text-primary);" onclick="window.closeSettings()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="notificationsEnabled"> Enable Notifications
+                </label>
+            </div>
+            <button class="btn" onclick="window.saveSettings()">Save</button>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        window.db = null;
+        window.currentView = 'notes';
+        window.currentItemId = null;
+        window.settings = {};
+
+        // Initialize database
+        async function initDB() {
+            console.log('Initializing database...');
+            window.db = new Dexie('UniversalOrganizer');
+            window.db.version(1).stores({
+                notes: '++id, title, createdAt, updatedAt',
+                tasks: '++id, title, status, priority, dueDate, createdAt',
+                events: '++id, title, start, end, createdAt',
+                bookmarks: '++id, title, url, createdAt',
+                settings: 'id'
+            });
+
+            const stored = await window.db.settings.get(1);
+            window.settings = stored || { theme: 'light' };
+            if (window.settings.theme === 'dark') {
+                document.body.classList.add('dark-mode');
+            }
+            console.log('Database initialized');
+        }
+
+        // Theme toggle
+        window.toggleTheme = function() {
+            document.body.classList.toggle('dark-mode');
+            window.settings.theme = document.body.classList.contains('dark-mode') ? 'dark' : 'light';
+            window.db.settings.put({ ...window.settings, id: 1 });
+        };
+
+        // Switch view
+        window.switchView = function(view) {
+            console.log('Switching to view:', view);
+            window.currentView = view;
+            document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            const titles = { notes: 'Notes', tasks: 'Tasks', calendar: 'Calendar', bookmarks: 'Bookmarks' };
+            document.getElementById('viewTitle').textContent = titles[view];
+            window.renderView();
+        };
+
+        // Render view
+        window.renderView = async function() {
+            console.log('Rendering view:', window.currentView);
+            const grid = document.getElementById('contentGrid');
+            grid.innerHTML = '';
+
+            try {
+                if (window.currentView === 'notes') {
+                    const notes = await window.db.notes.reverse().sortBy('updatedAt');
+                    console.log('Notes:', notes);
+                    notes.forEach(note => {
+                        const card = document.createElement('div');
+                        card.className = 'card';
+                        card.onclick = () => window.editItem(note.id);
+                        card.innerHTML = `
+                            <h3>${note.title}</h3>
+                            <div class="card-content">${note.content || ''}</div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 10px;">${new Date(note.updatedAt).toLocaleDateString()}</div>
+                        `;
+                        grid.appendChild(card);
+                    });
+                } else if (window.currentView === 'tasks') {
+                    const tasks = await window.db.tasks.toArray();
+                    console.log('Tasks:', tasks);
+                    tasks.forEach(task => {
+                        const item = document.createElement('div');
+                        item.className = `task-item priority-${task.priority || 'low'}`;
+                        item.innerHTML = `
+                            <input type="checkbox" ${task.status === 'completed' ? 'checked' : ''} onclick="window.toggleTask(${task.id})">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 500; cursor: pointer;" onclick="window.editItem(${task.id})">${task.title}</div>
+                                ${task.dueDate ? `<div style="font-size: 0.85rem; color: var(--text-secondary);">Due: ${new Date(task.dueDate).toLocaleString()}</div>` : ''}
+                            </div>
+                        `;
+                        grid.appendChild(item);
+                    });
+                } else if (window.currentView === 'calendar') {
+                    const events = await window.db.events.orderBy('start').toArray();
+                    console.log('Events:', events);
+                    events.forEach(event => {
+                        const card = document.createElement('div');
+                        card.className = 'card';
+                        card.onclick = () => window.editItem(event.id);
+                        card.style.background = 'var(--accent)';
+                        card.style.color = 'white';
+                        card.innerHTML = `
+                            <h3>${event.title}</h3>
+                            <div style="margin-top: 10px;">${new Date(event.start).toLocaleString()} - ${new Date(event.end).toLocaleString()}</div>
+                            ${event.description ? `<div style="margin-top: 10px;">${event.description}</div>` : ''}
+                        `;
+                        grid.appendChild(card);
+                    });
+                } else if (window.currentView === 'bookmarks') {
+                    const bookmarks = await window.db.bookmarks.toArray();
+                    console.log('Bookmarks:', bookmarks);
+                    bookmarks.forEach(bookmark => {
+                        const card = document.createElement('div');
+                        card.className = 'card';
+                        card.onclick = () => window.editItem(bookmark.id);
+                        card.innerHTML = `
+                            <h3>${bookmark.title}</h3>
+                            <a href="${bookmark.url}" target="_blank" onclick="event.stopPropagation()" style="color: var(--accent); word-break: break-all;">${bookmark.url}</a>
+                        `;
+                        grid.appendChild(card);
+                    });
+                }
+            } catch (error) {
+                console.error('Error rendering view:', error);
+            }
+        };
+
+        // Create new
+        window.createNew = function() {
+            console.log('Creating new item');
+            window.currentItemId = null;
+            document.getElementById('itemModal').classList.add('active');
+            document.getElementById('itemForm').reset();
+            document.getElementById('itemContent').innerHTML = '';
+            
+            document.getElementById('contentGroup').style.display = window.currentView === 'notes' ? 'block' : 'none';
+            document.getElementById('descriptionGroup').style.display = window.currentView === 'calendar' ? 'block' : 'none';
+            document.getElementById('urlGroup').style.display = window.currentView === 'bookmarks' ? 'block' : 'none';
+            document.getElementById('dueDateGroup').style.display = window.currentView === 'tasks' ? 'block' : 'none';
+            document.getElementById('priorityGroup').style.display = window.currentView === 'tasks' ? 'block' : 'none';
+            document.getElementById('startDateGroup').style.display = window.currentView === 'calendar' ? 'block' : 'none';
+            document.getElementById('endDateGroup').style.display = window.currentView === 'calendar' ? 'block' : 'none';
+            
+            const titles = { notes: 'New Note', tasks: 'New Task', calendar: 'New Event', bookmarks: 'New Bookmark' };
+            document.getElementById('modalTitle').textContent = titles[window.currentView];
+        };
+
+        // Edit item
+        window.editItem = async function(id) {
+            console.log('Editing item:', id);
+            window.currentItemId = id;
+            let item;
+            
+            if (window.currentView === 'notes') item = await window.db.notes.get(id);
+            else if (window.currentView === 'tasks') item = await window.db.tasks.get(id);
+            else if (window.currentView === 'calendar') item = await window.db.events.get(id);
+            else if (window.currentView === 'bookmarks') item = await window.db.bookmarks.get(id);
+            
+            if (!item) return;
+            
+            document.getElementById('itemModal').classList.add('active');
+            document.getElementById('itemTitle').value = item.title;
+            
+            document.getElementById('contentGroup').style.display = 'none';
+            document.getElementById('descriptionGroup').style.display = 'none';
+            document.getElementById('urlGroup').style.display = 'none';
+            document.getElementById('dueDateGroup').style.display = 'none';
+            document.getElementById('priorityGroup').style.display = 'none';
+            document.getElementById('startDateGroup').style.display = 'none';
+            document.getElementById('endDateGroup').style.display = 'none';
+            
+            if (window.currentView === 'notes') {
+                document.getElementById('itemContent').innerHTML = item.content || '';
+                document.getElementById('contentGroup').style.display = 'block';
+            }
+            if (window.currentView === 'tasks') {
+                document.getElementById('itemDueDate').value = item.dueDate || '';
+                document.getElementById('itemPriority').value = item.priority || 'medium';
+                document.getElementById('dueDateGroup').style.display = 'block';
+                document.getElementById('priorityGroup').style.display = 'block';
+            }
+            if (window.currentView === 'calendar') {
+                document.getElementById('itemDescription').value = item.description || '';
+                document.getElementById('itemStartDate').value = item.start || '';
+                document.getElementById('itemEndDate').value = item.end || '';
+                document.getElementById('descriptionGroup').style.display = 'block';
+                document.getElementById('startDateGroup').style.display = 'block';
+                document.getElementById('endDateGroup').style.display = 'block';
+            }
+            if (window.currentView === 'bookmarks') {
+                document.getElementById('itemUrl').value = item.url || '';
+                document.getElementById('urlGroup').style.display = 'block';
+            }
+            
+            document.getElementById('modalTitle').textContent = `Edit ${window.currentView.slice(0, -1)}`;
+        };
+
+        // Save item
+        window.saveItem = async function() {
+            console.log('Saving item...');
+            const title = document.getElementById('itemTitle').value;
+            if (!title) {
+                alert('Please enter a title');
+                return;
+            }
+            
+            const now = new Date().toISOString();
+            let item = { title, updatedAt: now };
+            
+            if (!window.currentItemId) {
+                item.createdAt = now;
+            }
+            
+            try {
+                if (window.currentView === 'notes') {
+                    item.content = document.getElementById('itemContent').innerHTML;
+                    if (window.currentItemId) {
+                        await window.db.notes.update(window.currentItemId, item);
+                        console.log('Note updated');
+                    } else {
+                        const id = await window.db.notes.add(item);
+                        console.log('Note added with id:', id);
+                    }
+                } else if (window.currentView === 'tasks') {
+                    item.dueDate = document.getElementById('itemDueDate').value;
+                    item.priority = document.getElementById('itemPriority').value;
+                    item.status = 'pending';
+                    if (window.currentItemId) {
+                        await window.db.tasks.update(window.currentItemId, item);
+                        console.log('Task updated');
+                    } else {
+                        const id = await window.db.tasks.add(item);
+                        console.log('Task added with id:', id);
+                    }
+                } else if (window.currentView === 'calendar') {
+                    item.description = document.getElementById('itemDescription').value;
+                    item.start = document.getElementById('itemStartDate').value;
+                    item.end = document.getElementById('itemEndDate').value;
+                    if (window.currentItemId) {
+                        await window.db.events.update(window.currentItemId, item);
+                        console.log('Event updated');
+                    } else {
+                        const id = await window.db.events.add(item);
+                        console.log('Event added with id:', id);
+                    }
+                } else if (window.currentView === 'bookmarks') {
+                    item.url = document.getElementById('itemUrl').value;
+                    if (window.currentItemId) {
+                        await window.db.bookmarks.update(window.currentItemId, item);
+                        console.log('Bookmark updated');
+                    } else {
+                        const id = await window.db.bookmarks.add(item);
+                        console.log('Bookmark added with id:', id);
+                    }
+                }
+                
+                window.closeModal();
+                await window.renderView();
+                console.log('Item saved successfully');
+            } catch (error) {
+                console.error('Error saving item:', error);
+                alert('Error saving item: ' + error.message);
+            }
+        };
+
+        window.closeModal = function() {
+            document.getElementById('itemModal').classList.remove('active');
+        };
+
+        // Toggle task
+        window.toggleTask = async function(id) {
+            const task = await window.db.tasks.get(id);
+            await window.db.tasks.update(id, { status: task.status === 'completed' ? 'pending' : 'completed' });
+            window.renderView();
+        };
+
+        // Export data
+        window.exportData = async function() {
+            const data = {
+                notes: await window.db.notes.toArray(),
+                tasks: await window.db.tasks.toArray(),
+                events: await window.db.events.toArray(),
+                bookmarks: await window.db.bookmarks.toArray()
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `organizer-backup-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        };
+
+        // Import data
+        window.importData = function() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'application/json';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const text = await file.text();
+                const data = JSON.parse(text);
+                
+                if (confirm('Import this data? It will be added to existing items.')) {
+                    if (data.notes) await window.db.notes.bulkAdd(data.notes);
+                    if (data.tasks) await window.db.tasks.bulkAdd(data.tasks);
+                    if (data.events) await window.db.events.bulkAdd(data.events);
+                    if (data.bookmarks) await window.db.bookmarks.bulkAdd(data.bookmarks);
+                    window.renderView();
+                    alert('Import successful!');
+                }
+            };
+            input.click();
+        };
+
+        // Settings
+        window.openSettings = function() {
+            document.getElementById('settingsModal').classList.add('active');
+            document.getElementById('notificationsEnabled').checked = window.settings.notificationsEnabled || false;
+        };
+
+        window.closeSettings = function() {
+            document.getElementById('settingsModal').classList.remove('active');
+        };
+
+        window.saveSettings = async function() {
+            window.settings.notificationsEnabled = document.getElementById('notificationsEnabled').checked;
+            await window.db.settings.put({ ...window.settings, id: 1 });
+            window.closeSettings();
+            alert('Settings saved!');
+        };
+
+        // Search
+        document.getElementById('searchBar').addEventListener('input', async (e) => {
+            const query = e.target.value.toLowerCase();
+            if (!query) {
+                window.renderView();
+                return;
+            }
+            
+            const grid = document.getElementById('contentGrid');
+            grid.innerHTML = '';
+            
+            if (window.currentView === 'notes') {
+                const notes = await window.db.notes.toArray();
+                const filtered = notes.filter(n => n.title.toLowerCase().includes(query) || (n.content && n.content.toLowerCase().includes(query)));
+                filtered.forEach(note => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    card.onclick = () => window.editItem(note.id);
+                    card.innerHTML = `<h3>${note.title}</h3><div class="card-content">${note.content || ''}</div>`;
+                    grid.appendChild(card);
+                });
+            }
+        });
+
+        // Initialize
+        window.addEventListener('DOMContentLoaded', async () => {
+            console.log('Page loaded, initializing...');
+            await initDB();
+            await window.renderView();
+            console.log('App ready!');
+        });
+    </script>
+</body>
+</html>
