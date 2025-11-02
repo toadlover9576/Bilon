@@ -1,4 +1,72 @@
 // app.js - simplified core logic
+// Initialize IndexedDB with Dexie
+const db = new Dexie("UniversalOrganizer");
+
+// Define tables (schema)
+db.version(1).stores({
+  notes: `
+    ++id,
+    title,
+    tags,
+    createdAt,
+    updatedAt,
+    pinned
+  `,
+  tasks: `
+    ++id,
+    title,
+    notesId,
+    status,
+    priority,
+    dueDate,
+    remindAt,
+    recurrenceRule,
+    projectId,
+    tags,
+    createdAt,
+    updatedAt
+  `,
+  events: `
+    ++id,
+    title,
+    start,
+    end,
+    calendarId,
+    attendees,
+    createdAt,
+    updatedAt
+  `,
+  attachments: `
+    ++id,
+    name,
+    mime,
+    size,
+    createdAt
+  `,
+  settings: `
+    id
+  `,
+  searchIndex: `
+    ++id,
+    content
+  `
+});
+
+// Example: create the tables (runs once)
+db.on('populate', async () => {
+  await db.settings.put({
+    id: 1,
+    theme: "light",
+    shortcuts: {},
+    encryptionMeta: { salt: "", iterations: 0 }
+  });
+});
+
+// Open database
+db.open().catch((err) => {
+  console.error("Failed to open db:", err);
+});
+
 const db = new Dexie('universal_dashboard');
 db.version(1).stores({
   notes: '++id,title,updatedAt,createdAt,*tags',
