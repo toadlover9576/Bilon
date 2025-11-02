@@ -194,3 +194,6 @@ document.getElementById('btn-import').addEventListener('click', ()=>{
   };
   inp.click();
 });
+window.addEventListener("DOMContentLoaded", async () => {
+  await buildSearchIndex();
+});
