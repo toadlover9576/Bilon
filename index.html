@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Universal Dashboard (offline)</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+  <div id="app">
+    <aside id="sidebar">
+      <button id="btn-new-note">New Note</button>
+      <button id="btn-new-task">New Task</button>
+      <input id="search" placeholder="Search (fuzzy)..." />
+      <hr/>
+      <div id="modules">
+        <button data-module="notes" class="module active">Notes</button>
+        <button data-module="tasks" class="module">Tasks</button>
+        <button data-module="calendar" class="module">Calendar</button>
+        <button data-module="settings" class="module">Settings</button>
+      </div>
+    </aside>
+
+    <main id="main">
+      <header id="topbar">
+        <div id="title">Universal Dashboard</div>
+        <div id="profile">
+          <button id="btn-lock">Lock (encrypt)</button>
+          <button id="btn-export">Export</button>
+          <button id="btn-import">Import</button>
+        </div>
+      </header>
+
+      <section id="content">
+        <!-- dynamic content injected here -->
+      </section>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/dexie@3/dist/dexie.min.js"></script>
+  <script src="https://unpkg.com/fuse.js@6"></script>
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(console.warn);
+    }
+  </script>
+</body>
+</html>
