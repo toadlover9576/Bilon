@@ -1,0 +1,17 @@
+:root{
+  --sidebar-w: 300px;
+  --gap: 12px;
+  --bg: #fafafa;
+}
+*{box-sizing:border-box}
+html,body,#app{height:100%;margin:0;font-family:system-ui,Segoe UI,Roboto,Arial;}
+#app{display:grid;grid-template-columns:var(--sidebar-w) 1fr;gap:var(--gap);height:100vh;background:var(--bg)}
+#sidebar{padding:16px;border-right:1px solid #e6e6e6;background:white;overflow:auto}
+#main{display:flex;flex-direction:column;height:100%}
+#topbar{display:flex;justify-content:space-between;align-items:center;padding:12px;border-bottom:1px solid #eee;background:white}
+#content{padding:16px;overflow:auto}
+@media (max-width:800px){
+  #app{grid-template-columns:1fr}
+  #sidebar{order:2}
+  #main{order:1}
+}
