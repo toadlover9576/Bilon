@@ -262,10 +262,10 @@
 
         <div class="sidebar">
             <h3 style="margin-bottom: 10px; font-size: 0.85rem; text-transform: uppercase; color: var(--text-secondary);">Modules</h3>
-            <div class="sidebar-item active" onclick="window.switchView('notes')">📝 Notes</div>
-            <div class="sidebar-item" onclick="window.switchView('tasks')">✓ Tasks</div>
-            <div class="sidebar-item" onclick="window.switchView('calendar')">📅 Calendar</div>
-            <div class="sidebar-item" onclick="window.switchView('bookmarks')">🔖 Bookmarks</div>
+            <div class="sidebar-item active" onclick="window.switchView('notes', this)">📝 Notes</div>
+            <div class="sidebar-item" onclick="window.switchView('tasks', this)">✓ Tasks</div>
+            <div class="sidebar-item" onclick="window.switchView('calendar', this)">📅 Calendar</div>
+            <div class="sidebar-item" onclick="window.switchView('bookmarks', this)">🔖 Bookmarks</div>
             <h3 style="margin: 20px 0 10px 0; font-size: 0.85rem; text-transform: uppercase; color: var(--text-secondary);">Actions</h3>
             <div class="sidebar-item" onclick="window.createNew()">➕ Create New</div>
         </div>
@@ -385,11 +385,11 @@
         };
 
         // Switch view
-        window.switchView = function(view) {
+        window.switchView = function(view, el) {
             console.log('Switching to view:', view);
             window.currentView = view;
             document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
-            event.target.classList.add('active');
+            if (el) el.classList.add('active');
             
             const titles = { notes: 'Notes', tasks: 'Tasks', calendar: 'Calendar', bookmarks: 'Bookmarks' };
             document.getElementById('viewTitle').textContent = titles[view];
@@ -416,12 +416,27 @@
                             <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 10px;">${new Date(note.updatedAt).toLocaleDateString()}</div>
                         `;
                         const delBtn = document.createElement('button');
-delBtn.textContent = '🗑️';
-delBtn.className = 'btn btn-small btn-secondary';
-delBtn.style.marginTop = '10px';
-delBtn.onclick = (e) => { e.stopPropagation(); window.deleteItem(note.id); };
-card.appendChild(delBtn);
-
+                        delBtn.textContent = '🗑️ Delete';
+                        delBtn.className = 'btn btn-small btn-secondary';
+                        delBtn.style.marginTop = '10px';
+                        delBtn.dataset.noteId = note.id;
+                        delBtn.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const id = parseInt(this.dataset.noteId);
+                            console.log('CLICKED DELETE FOR NOTE ID:', id);
+                            if (confirm('Delete this note?')) {
+                                console.log('User confirmed, deleting...');
+                                window.db.notes.delete(id).then(() => {
+                                    console.log('Deleted from DB');
+                                    window.renderView();
+                                }).catch(err => {
+                                    console.error('Delete failed:', err);
+                                    alert('Delete failed: ' + err.message);
+                                });
+                            }
+                        });
+                        card.appendChild(delBtn);
                         grid.appendChild(card);
                     });
                 } else if (window.currentView === 'tasks') {
@@ -437,6 +452,27 @@ card.appendChild(delBtn);
                                 ${task.dueDate ? `<div style="font-size: 0.85rem; color: var(--text-secondary);">Due: ${new Date(task.dueDate).toLocaleString()}</div>` : ''}
                             </div>
                         `;
+                        const delBtn = document.createElement('button');
+                        delBtn.textContent = '🗑️ Delete';
+                        delBtn.className = 'btn btn-small btn-secondary';
+                        delBtn.dataset.taskId = task.id;
+                        delBtn.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const id = parseInt(this.dataset.taskId);
+                            console.log('CLICKED DELETE FOR TASK ID:', id);
+                            if (confirm('Delete this task?')) {
+                                console.log('User confirmed, deleting...');
+                                window.db.tasks.delete(id).then(() => {
+                                    console.log('Deleted from DB');
+                                    window.renderView();
+                                }).catch(err => {
+                                    console.error('Delete failed:', err);
+                                    alert('Delete failed: ' + err.message);
+                                });
+                            }
+                        });
+                        item.appendChild(delBtn);
                         grid.appendChild(item);
                     });
                 } else if (window.currentView === 'calendar') {
@@ -450,9 +486,31 @@ card.appendChild(delBtn);
                         card.style.color = 'white';
                         card.innerHTML = `
                             <h3>${event.title}</h3>
-                            <div style="margin-top: 10px;">${new Date(event.start).toLocaleString()} - ${new Date(event.end).toLocaleString()}</div>
+                            <div style="margin-top: 10px;">${new Date(event.start).toLocaleDateString()} - ${new Date(event.end).toLocaleDateString()}</div>
                             ${event.description ? `<div style="margin-top: 10px;">${event.description}</div>` : ''}
                         `;
+                        const delBtn = document.createElement('button');
+                        delBtn.textContent = '🗑️ Delete';
+                        delBtn.className = 'btn btn-small btn-secondary';
+                        delBtn.style.marginTop = '10px';
+                        delBtn.dataset.eventId = event.id;
+                        delBtn.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const id = parseInt(this.dataset.eventId);
+                            console.log('CLICKED DELETE FOR EVENT ID:', id);
+                            if (confirm('Delete this event?')) {
+                                console.log('User confirmed, deleting...');
+                                window.db.events.delete(id).then(() => {
+                                    console.log('Deleted from DB');
+                                    window.renderView();
+                                }).catch(err => {
+                                    console.error('Delete failed:', err);
+                                    alert('Delete failed: ' + err.message);
+                                });
+                            }
+                        });
+                        card.appendChild(delBtn);
                         grid.appendChild(card);
                     });
                 } else if (window.currentView === 'bookmarks') {
@@ -466,6 +524,28 @@ card.appendChild(delBtn);
                             <h3>${bookmark.title}</h3>
                             <a href="${bookmark.url}" target="_blank" onclick="event.stopPropagation()" style="color: var(--accent); word-break: break-all;">${bookmark.url}</a>
                         `;
+                        const delBtn = document.createElement('button');
+                        delBtn.textContent = '🗑️ Delete';
+                        delBtn.className = 'btn btn-small btn-secondary';
+                        delBtn.style.marginTop = '10px';
+                        delBtn.dataset.bookmarkId = bookmark.id;
+                        delBtn.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const id = parseInt(this.dataset.bookmarkId);
+                            console.log('CLICKED DELETE FOR BOOKMARK ID:', id);
+                            if (confirm('Delete this bookmark?')) {
+                                console.log('User confirmed, deleting...');
+                                window.db.bookmarks.delete(id).then(() => {
+                                    console.log('Deleted from DB');
+                                    window.renderView();
+                                }).catch(err => {
+                                    console.error('Delete failed:', err);
+                                    alert('Delete failed: ' + err.message);
+                                });
+                            }
+                        });
+                        card.appendChild(delBtn);
                         grid.appendChild(card);
                     });
                 }
@@ -496,6 +576,7 @@ card.appendChild(delBtn);
 
         // Edit item
         window.editItem = async function(id) {
+            if (!id || isNaN(id)) return;
             console.log('Editing item:', id);
             window.currentItemId = id;
             let item;
@@ -713,21 +794,41 @@ card.appendChild(delBtn);
             await window.renderView();
             console.log('App ready!');
         });
+
         // Delete item
-window.deleteItem = async function(id) {
-    if (!confirm("Delete this item permanently?")) return;
-    try {
-        if (window.currentView === 'notes') await window.db.notes.delete(id);
-        else if (window.currentView === 'tasks') await window.db.tasks.delete(id);
-        else if (window.currentView === 'calendar') await window.db.events.delete(id);
-        else if (window.currentView === 'bookmarks') await window.db.bookmarks.delete(id);
-        await window.renderView();
-        console.log('Item deleted:', id);
-    } catch (err) {
-        console.error('Error deleting:', err);
-        alert('Error deleting item: ' + err.message);
-    }
-};
+        window.deleteItem = async function(id) {
+            console.log('Delete called for id:', id, 'in view:', window.currentView);
+            if (!confirm("Delete this item permanently?")) return;
+            try {
+                let deleted = false;
+                if (window.currentView === 'notes') {
+                    await window.db.notes.delete(id);
+                    deleted = true;
+                }
+                else if (window.currentView === 'tasks') {
+                    await window.db.tasks.delete(id);
+                    deleted = true;
+                }
+                else if (window.currentView === 'calendar') {
+                    await window.db.events.delete(id);
+                    deleted = true;
+                }
+                else if (window.currentView === 'bookmarks') {
+                    await window.db.bookmarks.delete(id);
+                    deleted = true;
+                }
+                
+                if (deleted) {
+                    console.log('Item deleted successfully:', id);
+                    await window.renderView();
+                } else {
+                    console.error('No view matched for deletion');
+                }
+            } catch (err) {
+                console.error('Error deleting:', err);
+                alert('Error deleting item: ' + err.message);
+            }
+        };
 
     </script>
 </body>
