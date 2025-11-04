@@ -473,6 +473,13 @@ card.appendChild(delBtn);
                             <h3>${bookmark.title}</h3>
                             <a href="${bookmark.url}" target="_blank" onclick="event.stopPropagation()" style="color: var(--accent); word-break: break-all;">${bookmark.url}</a>
                         `;
+                                const delBtn = document.createElement('button');
+        delBtn.textContent = '🗑️';
+        delBtn.className = 'btn btn-small btn-secondary';
+        delBtn.style.marginTop = '10px';
+        delBtn.onclick = (e) => { e.stopPropagation(); window.deleteItem(bookmark.id); };
+        card.appendChild(delBtn);
+
                         grid.appendChild(card);
                     });
                 }
