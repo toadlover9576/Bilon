@@ -706,6 +706,22 @@
             await window.renderView();
             console.log('App ready!');
         });
+        // Delete item
+window.deleteItem = async function(id) {
+    if (!confirm("Delete this item permanently?")) return;
+    try {
+        if (window.currentView === 'notes') await window.db.notes.delete(id);
+        else if (window.currentView === 'tasks') await window.db.tasks.delete(id);
+        else if (window.currentView === 'calendar') await window.db.events.delete(id);
+        else if (window.currentView === 'bookmarks') await window.db.bookmarks.delete(id);
+        await window.renderView();
+        console.log('Item deleted:', id);
+    } catch (err) {
+        console.error('Error deleting:', err);
+        alert('Error deleting item: ' + err.message);
+    }
+};
+
     </script>
 </body>
 </html>
