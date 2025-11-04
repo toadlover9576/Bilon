@@ -415,6 +415,13 @@
                             <div class="card-content">${note.content || ''}</div>
                             <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 10px;">${new Date(note.updatedAt).toLocaleDateString()}</div>
                         `;
+                        const delBtn = document.createElement('button');
+delBtn.textContent = '🗑️';
+delBtn.className = 'btn btn-small btn-secondary';
+delBtn.style.marginTop = '10px';
+delBtn.onclick = (e) => { e.stopPropagation(); window.deleteItem(note.id); };
+card.appendChild(delBtn);
+
                         grid.appendChild(card);
                     });
                 } else if (window.currentView === 'tasks') {
