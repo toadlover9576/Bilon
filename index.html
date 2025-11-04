@@ -437,6 +437,13 @@ card.appendChild(delBtn);
                                 ${task.dueDate ? `<div style="font-size: 0.85rem; color: var(--text-secondary);">Due: ${new Date(task.dueDate).toLocaleString()}</div>` : ''}
                             </div>
                         `;
+                                const delBtn = document.createElement('button');
+        delBtn.textContent = '🗑️';
+        delBtn.className = 'btn btn-small btn-secondary';
+        delBtn.style.marginTop = '10px';
+        delBtn.onclick = (e) => { e.stopPropagation(); window.deleteItem(task.id); };
+        card.appendChild(delBtn);
+
                         grid.appendChild(item);
                     });
                 } else if (window.currentView === 'calendar') {
