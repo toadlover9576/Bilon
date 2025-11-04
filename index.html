@@ -453,6 +453,13 @@ card.appendChild(delBtn);
                             <div style="margin-top: 10px;">${new Date(event.start).toLocaleString()} - ${new Date(event.end).toLocaleString()}</div>
                             ${event.description ? `<div style="margin-top: 10px;">${event.description}</div>` : ''}
                         `;
+                                const delBtn = document.createElement('button');
+        delBtn.textContent = '🗑️';
+        delBtn.className = 'btn btn-small btn-secondary';
+        delBtn.style.marginTop = '10px';
+        delBtn.onclick = (e) => { e.stopPropagation(); window.deleteItem(event.id); };
+        card.appendChild(delBtn);
+
                         grid.appendChild(card);
                     });
                 } else if (window.currentView === 'bookmarks') {
