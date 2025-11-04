@@ -481,6 +481,13 @@ card.appendChild(delBtn);
             document.getElementById('itemModal').classList.add('active');
             document.getElementById('itemForm').reset();
             document.getElementById('itemContent').innerHTML = '';
+            const delBtn = document.createElement('button');
+delBtn.textContent = '🗑️';
+delBtn.className = 'btn btn-small btn-secondary';
+delBtn.style.marginTop = '10px';
+delBtn.onclick = (e) => { e.stopPropagation(); window.deleteItem(event.id); };
+card.appendChild(delBtn);
+
             
             document.getElementById('contentGroup').style.display = window.currentView === 'notes' ? 'block' : 'none';
             document.getElementById('descriptionGroup').style.display = window.currentView === 'calendar' ? 'block' : 'none';
