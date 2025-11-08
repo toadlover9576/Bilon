@@ -23,7 +23,7 @@
 <meta name="msapplication-TileColor" content="#ffffff">
 <meta name="msapplication-TileImage" content="Favicons/ms-icon-144x144.png">
 <meta name="theme-color" content="#ffffff">
-    <>
+    <style>
         * {
             margin: 0;
             padding: 0;
@@ -263,40 +263,6 @@
             display: inline-block;
             margin-right: 5px;
         }
-        .progress-wrapper {
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px solid var(--border);
-        }
-
-        .progress-label {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            margin-bottom: 6px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .progress-bar-container {
-            background: var(--bg-tertiary);
-            border-radius: 10px;
-            overflow: hidden;
-            height: 8px;
-            box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
-        }
-
-        .progress-bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #6c9aff, #4a7fff);
-            transition: width 0.6s ease;
-            border-radius: 10px;
-        }
-
-        .progress-percent {
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
     </style>
 </head>
 <body>
@@ -349,14 +315,6 @@
                 <div class="form-group" id="descriptionGroup" style="display:none">
                     <label>Description</label>
                     <textarea id="itemDescription"></textarea>
-                </div>
-                <div class="form-group" id="progressGroup" style="display:none">
-                    <label>Progress (optional)</label>
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <input type="number" id="itemProgressCurrent" placeholder="Current" min="0" style="width: 150px;">
-                        <span style="color: var(--text-secondary);">out of</span>
-                        <input type="number" id="itemProgressTotal" placeholder="Total" min="1" style="width: 150px;">
-                    </div>
                 </div>
                 <div class="form-group" id="urlGroup" style="display:none">
                     <label>URL</label>
