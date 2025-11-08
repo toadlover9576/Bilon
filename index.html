@@ -350,6 +350,14 @@
                     <label>Description</label>
                     <textarea id="itemDescription"></textarea>
                 </div>
+                <div class="form-group" id="progressGroup" style="display:none">
+                    <label>Progress (optional)</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="number" id="itemProgressCurrent" placeholder="Current" min="0" style="width: 150px;">
+                        <span style="color: var(--text-secondary);">out of</span>
+                        <input type="number" id="itemProgressTotal" placeholder="Total" min="1" style="width: 150px;">
+                    </div>
+                </div>
                 <div class="form-group" id="urlGroup" style="display:none">
                     <label>URL</label>
                     <input type="url" id="itemUrl">
