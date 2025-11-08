@@ -858,58 +858,5 @@
     </script>
     <script>
 document.addEventListener('DOMContentLoaded', () => {
-  // Find all note cards that have progress data
-  document.querySelectorAll('[data-completed][data-total]').forEach(card => {
-    const completed = parseFloat(card.dataset.completed);
-    const total = parseFloat(card.dataset.total);
-    const percent = total > 0 ? Math.min(100, Math.round((completed / total) * 100)) : 0;
-
-    // Create progress container
-    const container = document.createElement('div');
-    container.style.marginTop = '12px';
-    container.style.textAlign = 'center';
-
-    // Label
-    const label = document.createElement('div');
-    label.textContent = `${completed} of ${total}`;
-    label.style.fontSize = '0.9rem';
-    label.style.color = '#555';
-    label.style.marginBottom = '4px';
-
-    // Bar wrapper
-    const barWrap = document.createElement('div');
-    barWrap.style.background = '#eee';
-    barWrap.style.borderRadius = '10px';
-    barWrap.style.height = '8px';
-    barWrap.style.overflow = 'hidden';
-
-    // Actual bar
-    const bar = document.createElement('div');
-    bar.style.height = '100%';
-    bar.style.width = '0%';
-    bar.style.background = 'linear-gradient(90deg, #78a6ff, #4e7dff)';
-    bar.style.transition = 'width 0.6s ease';
-
-    // Percentage text
-    const percentText = document.createElement('div');
-    percentText.textContent = `${percent}%`;
-    percentText.style.fontSize = '0.9rem';
-    percentText.style.fontWeight = '600';
-    percentText.style.marginTop = '4px';
-    percentText.style.color = '#333';
-
-    barWrap.appendChild(bar);
-    container.appendChild(label);
-    container.appendChild(barWrap);
-    container.appendChild(percentText);
-    card.appendChild(container);
-
-    // Animate width
-    requestAnimationFrame(() => {
-      bar.style.width = `${percent}%`;
-    });
-  });
-});
-</script>
 </body>
 </html>
