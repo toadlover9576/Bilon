@@ -254,6 +254,27 @@
             background: var(--bg-secondary);
         }
 
+        .strikethrough-btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+        }
+
+        .strikethrough-btn:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+        .strikethrough-btn.active {
+            background: var(--accent);
+            color: white;
+        }
+
         .tag {
             background: var(--accent);
             color: white;
@@ -346,6 +367,7 @@
                 </div>
                 <div class="form-group" id="contentGroup">
                     <label>Content</label>
+                    <button type="button" class="strikethrough-btn" onclick="window.toggleStrikethrough()" title="Select text and click to strikethrough">⌫ Strikethrough</button>
                     <div id="itemContent" contenteditable="true"></div>
                 </div>
                 <div class="form-group" id="progressGroup" style="display:none">
@@ -358,6 +380,7 @@
                 </div>
                 <div class="form-group" id="descriptionGroup" style="display:none">
                     <label>Description</label>
+                    <button type="button" class="strikethrough-btn" onclick="window.toggleStrikethroughDescription()" title="Select text and click to strikethrough">⌫ Strikethrough</button>
                     <textarea id="itemDescription"></textarea>
                 </div>
                 <div class="form-group" id="urlGroup" style="display:none">
@@ -898,6 +921,45 @@
             const displayHours = hours % 12 || 12;
             document.getElementById('estClock').textContent = `${displayHours}:${minutes}:${seconds} ${ampm} EST`;
         }
+
+        // Strikethrough functionality
+        window.toggleStrikethrough = function() {
+            const selection = window.getSelection();
+            if (!selection.rangeCount || selection.isCollapsed) {
+                alert('Please select some text first');
+                return;
+            }
+
+            const range = selection.getRangeAt(0);
+            const selectedText = range.toString();
+            
+            if (confirm(`Strikethrough this text?\n\n"${selectedText}"`)) {
+                const span = document.createElement('span');
+                span.style.textDecoration = 'line-through';
+                span.textContent = selectedText;
+                range.deleteContents();
+                range.insertNode(span);
+                selection.removeAllRanges();
+            }
+        };
+
+        window.toggleStrikethroughDescription = function() {
+            const textarea = document.getElementById('itemDescription');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selectedText = textarea.value.substring(start, end);
+            
+            if (!selectedText) {
+                alert('Please select some text first');
+                return;
+            }
+            
+            if (confirm(`Strikethrough this text?\n\n"${selectedText}"`)) {
+                const before = textarea.value.substring(0, start);
+                const after = textarea.value.substring(end);
+                textarea.value = before + '~~' + selectedText + '~~' + after;
+            }
+        };
 
         // Delete item
         window.deleteItem = async function(id) {
