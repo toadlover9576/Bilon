@@ -291,6 +291,31 @@
             <input type="text" class="search-bar" id="searchBar" placeholder="Search everything...">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <h2 id="viewTitle">Notes</h2>
+                      <!-- PROGRESS BAR START -->
+      <div id="progress-container" style="max-width:400px;margin:30px auto;text-align:center;font-family:'Poppins',sans-serif;">
+        <div id="progress-label" style="font-size:1rem;margin-bottom:8px;color:#444;">Loading progress...</div>
+        <div style="background:#f0f0f0;border-radius:20px;overflow:hidden;height:20px;box-shadow:inset 0 1px 3px rgba(0,0,0,0.1);">
+          <div id="progress-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#6c9aff,#4a7fff);transition:width 0.6s ease;"></div>
+        </div>
+        <div id="progress-percent" style="margin-top:8px;font-weight:600;color:#333;">0%</div>
+      </div>
+
+      <script>
+        // === CHANGE THESE NUMBERS ===
+        const completed = 52;   // e.g. tickets done
+        const total = 476;      // e.g. total tickets
+
+        // === CALCULATE AND UPDATE ===
+        const percent = Math.min(100, Math.round((completed / total) * 100));
+        const bar = document.getElementById('progress-bar');
+        const percentText = document.getElementById('progress-percent');
+        const label = document.getElementById('progress-label');
+
+        setTimeout(() => { bar.style.width = percent + '%'; }, 200);
+        percentText.textContent = percent + '% complete';
+        label.textContent = `${completed} of ${total} tickets`;
+      </script>
+      <!-- PROGRESS BAR END -->
                 <button class="btn" onclick="window.createNew()">+ New</button>
             </div>
             <div class="grid-container" id="contentGrid"></div>
