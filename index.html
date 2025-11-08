@@ -387,6 +387,11 @@
                     <label>URL</label>
                     <input type="url" id="itemUrl">
                 </div>
+                <div class="form-group" id="taskDescriptionGroup" style="display:none">
+                    <label>Task Description</label>
+                    <button type="button" class="strikethrough-btn" onclick="window.toggleStrikethroughTaskDescription()" title="Select text and click to strikethrough">⌫ Strikethrough</button>
+                    <textarea id="itemTaskDescription"></textarea>
+                </div>
                 <div class="form-group" id="dueDateGroup" style="display:none">
                     <label>Due Date</label>
                     <input type="datetime-local" id="itemDueDate">
@@ -547,11 +552,29 @@
                     tasks.forEach(task => {
                         const item = document.createElement('div');
                         item.className = `task-item priority-${task.priority || 'low'}`;
+                        
+                        let progressHTML = '';
+                        if (task.progressCurrent !== undefined && task.progressTotal !== undefined && task.progressTotal > 0) {
+                            const percentage = Math.round((task.progressCurrent / task.progressTotal) * 100);
+                            progressHTML = `
+                                <div class="progress-wrapper">
+                                    <div class="progress-label">
+                                        <span>${task.progressCurrent} / ${task.progressTotal}</span>
+                                        <span class="progress-percent">${percentage}%</span>
+                                    </div>
+                                    <div class="progress-bar-container">
+                                        <div class="progress-bar-fill" style="width: ${percentage}%"></div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
                         item.innerHTML = `
                             <input type="checkbox" ${task.status === 'completed' ? 'checked' : ''} onclick="window.toggleTask(${task.id})">
                             <div style="flex: 1;">
                                 <div style="font-weight: 500; cursor: pointer;" onclick="window.editItem(${task.id})">${task.title}</div>
                                 ${task.dueDate ? `<div style="font-size: 0.85rem; color: var(--text-secondary);">Due: ${new Date(task.dueDate).toLocaleString()}</div>` : ''}
+                                ${progressHTML}
                             </div>
                         `;
                         const delBtn = document.createElement('button');
@@ -665,7 +688,8 @@
             document.getElementById('itemContent').innerHTML = '';
             
             document.getElementById('contentGroup').style.display = window.currentView === 'notes' ? 'block' : 'none';
-            document.getElementById('progressGroup').style.display = window.currentView === 'notes' ? 'block' : 'none';
+            document.getElementById('progressGroup').style.display = window.currentView === 'notes' || window.currentView === 'tasks' ? 'block' : 'none';
+            document.getElementById('taskDescriptionGroup').style.display = window.currentView === 'tasks' ? 'block' : 'none';
             document.getElementById('descriptionGroup').style.display = window.currentView === 'calendar' ? 'block' : 'none';
             document.getElementById('urlGroup').style.display = window.currentView === 'bookmarks' ? 'block' : 'none';
             document.getElementById('dueDateGroup').style.display = window.currentView === 'tasks' ? 'block' : 'none';
@@ -696,6 +720,7 @@
             
             document.getElementById('contentGroup').style.display = 'none';
             document.getElementById('progressGroup').style.display = 'none';
+            document.getElementById('taskDescriptionGroup').style.display = 'none';
             document.getElementById('descriptionGroup').style.display = 'none';
             document.getElementById('urlGroup').style.display = 'none';
             document.getElementById('dueDateGroup').style.display = 'none';
@@ -713,8 +738,13 @@
             if (window.currentView === 'tasks') {
                 document.getElementById('itemDueDate').value = item.dueDate || '';
                 document.getElementById('itemPriority').value = item.priority || 'medium';
+                document.getElementById('itemProgressCurrent').value = item.progressCurrent || '';
+                document.getElementById('itemProgressTotal').value = item.progressTotal || '';
+                document.getElementById('itemTaskDescription').value = item.taskDescription || '';
                 document.getElementById('dueDateGroup').style.display = 'block';
                 document.getElementById('priorityGroup').style.display = 'block';
+                document.getElementById('progressGroup').style.display = 'block';
+                document.getElementById('taskDescriptionGroup').style.display = 'block';
             }
             if (window.currentView === 'calendar') {
                 document.getElementById('itemDescription').value = item.description || '';
@@ -768,6 +798,13 @@
                     item.dueDate = document.getElementById('itemDueDate').value;
                     item.priority = document.getElementById('itemPriority').value;
                     item.status = 'pending';
+                    item.taskDescription = document.getElementById('itemTaskDescription').value;
+                    const progressCurrent = document.getElementById('itemProgressCurrent').value;
+                    const progressTotal = document.getElementById('itemProgressTotal').value;
+                    if (progressCurrent && progressTotal) {
+                        item.progressCurrent = parseFloat(progressCurrent);
+                        item.progressTotal = parseFloat(progressTotal);
+                    }
                     if (window.currentItemId) {
                         await window.db.tasks.update(window.currentItemId, item);
                         console.log('Task updated');
@@ -945,6 +982,24 @@
 
         window.toggleStrikethroughDescription = function() {
             const textarea = document.getElementById('itemDescription');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selectedText = textarea.value.substring(start, end);
+            
+            if (!selectedText) {
+                alert('Please select some text first');
+                return;
+            }
+            
+            if (confirm(`Strikethrough this text?\n\n"${selectedText}"`)) {
+                const before = textarea.value.substring(0, start);
+                const after = textarea.value.substring(end);
+                textarea.value = before + '~~' + selectedText + '~~' + after;
+            }
+        };
+
+        window.toggleStrikethroughTaskDescription = function() {
+            const textarea = document.getElementById('itemTaskDescription');
             const start = textarea.selectionStart;
             const end = textarea.selectionEnd;
             const selectedText = textarea.value.substring(start, end);
