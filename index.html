@@ -304,7 +304,8 @@
     <div class="app-container">
         <div class="top-nav">
             <h1>Bilon: Universal Organizer</h1>
-            <div style="display: flex; gap: 10px;">
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <div id="estClock" style="font-size: 1rem; font-weight: 500; color: var(--text-primary); margin-right: 10px;"></div>
                 <button class="btn btn-secondary btn-small" onclick="window.toggleTheme()">🌓</button>
                 <button class="btn btn-secondary btn-small" onclick="window.exportData()">💾 Export</button>
                 <button class="btn btn-secondary btn-small" onclick="window.importData()">📥 Import</button>
@@ -881,8 +882,22 @@
             console.log('Page loaded, initializing...');
             await initDB();
             await window.renderView();
+            updateESTClock();
+            setInterval(updateESTClock, 1000);
             console.log('App ready!');
         });
+
+        // EST Clock
+        function updateESTClock() {
+            const now = new Date();
+            const estTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+            const hours = estTime.getHours();
+            const minutes = estTime.getMinutes().toString().padStart(2, '0');
+            const seconds = estTime.getSeconds().toString().padStart(2, '0');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            const displayHours = hours % 12 || 12;
+            document.getElementById('estClock').textContent = `${displayHours}:${minutes}:${seconds} ${ampm} EST`;
+        }
 
         // Delete item
         window.deleteItem = async function(id) {
