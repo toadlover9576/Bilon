@@ -263,6 +263,41 @@
             display: inline-block;
             margin-right: 5px;
         }
+
+        .progress-wrapper {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .progress-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .progress-bar-container {
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+            overflow: hidden;
+            height: 8px;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #6c9aff, #4a7fff);
+            transition: width 0.6s ease;
+            border-radius: 10px;
+        }
+
+        .progress-percent {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
@@ -311,6 +346,14 @@
                 <div class="form-group" id="contentGroup">
                     <label>Content</label>
                     <div id="itemContent" contenteditable="true"></div>
+                </div>
+                <div class="form-group" id="progressGroup" style="display:none">
+                    <label>Progress (optional)</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="number" id="itemProgressCurrent" placeholder="Current" min="0" style="width: 150px;">
+                        <span style="color: var(--text-secondary);">out of</span>
+                        <input type="number" id="itemProgressTotal" placeholder="Total" min="1" style="width: 150px;">
+                    </div>
                 </div>
                 <div class="form-group" id="descriptionGroup" style="display:none">
                     <label>Description</label>
@@ -427,10 +470,28 @@
                         const card = document.createElement('div');
                         card.className = 'card';
                         card.onclick = () => window.editItem(note.id);
+                        
+                        let progressHTML = '';
+                        if (note.progressCurrent !== undefined && note.progressTotal !== undefined && note.progressTotal > 0) {
+                            const percentage = Math.round((note.progressCurrent / note.progressTotal) * 100);
+                            progressHTML = `
+                                <div class="progress-wrapper">
+                                    <div class="progress-label">
+                                        <span>${note.progressCurrent} / ${note.progressTotal}</span>
+                                        <span class="progress-percent">${percentage}%</span>
+                                    </div>
+                                    <div class="progress-bar-container">
+                                        <div class="progress-bar-fill" style="width: ${percentage}%"></div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
                         card.innerHTML = `
                             <h3>${note.title}</h3>
                             <div class="card-content">${note.content || ''}</div>
                             <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 10px;">${new Date(note.updatedAt).toLocaleDateString()}</div>
+                            ${progressHTML}
                         `;
                         const delBtn = document.createElement('button');
                         delBtn.textContent = '🗑️ Delete';
@@ -580,6 +641,7 @@
             document.getElementById('itemContent').innerHTML = '';
             
             document.getElementById('contentGroup').style.display = window.currentView === 'notes' ? 'block' : 'none';
+            document.getElementById('progressGroup').style.display = window.currentView === 'notes' ? 'block' : 'none';
             document.getElementById('descriptionGroup').style.display = window.currentView === 'calendar' ? 'block' : 'none';
             document.getElementById('urlGroup').style.display = window.currentView === 'bookmarks' ? 'block' : 'none';
             document.getElementById('dueDateGroup').style.display = window.currentView === 'tasks' ? 'block' : 'none';
@@ -609,6 +671,7 @@
             document.getElementById('itemTitle').value = item.title;
             
             document.getElementById('contentGroup').style.display = 'none';
+            document.getElementById('progressGroup').style.display = 'none';
             document.getElementById('descriptionGroup').style.display = 'none';
             document.getElementById('urlGroup').style.display = 'none';
             document.getElementById('dueDateGroup').style.display = 'none';
@@ -618,7 +681,10 @@
             
             if (window.currentView === 'notes') {
                 document.getElementById('itemContent').innerHTML = item.content || '';
+                document.getElementById('itemProgressCurrent').value = item.progressCurrent || '';
+                document.getElementById('itemProgressTotal').value = item.progressTotal || '';
                 document.getElementById('contentGroup').style.display = 'block';
+                document.getElementById('progressGroup').style.display = 'block';
             }
             if (window.currentView === 'tasks') {
                 document.getElementById('itemDueDate').value = item.dueDate || '';
@@ -661,6 +727,12 @@
             try {
                 if (window.currentView === 'notes') {
                     item.content = document.getElementById('itemContent').innerHTML;
+                    const progressCurrent = document.getElementById('itemProgressCurrent').value;
+                    const progressTotal = document.getElementById('itemProgressTotal').value;
+                    if (progressCurrent && progressTotal) {
+                        item.progressCurrent = parseFloat(progressCurrent);
+                        item.progressTotal = parseFloat(progressTotal);
+                    }
                     if (window.currentItemId) {
                         await window.db.notes.update(window.currentItemId, item);
                         console.log('Note updated');
