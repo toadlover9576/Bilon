@@ -836,8 +836,11 @@
                 </label>
             </div>
             <div class="form-group">
-                <label>Notify before events (minutes)</label>
+                <label>Remind me before tasks/events (minutes)</label>
                 <input type="number" id="eventNotifyMinutes" min="1" max="1440" placeholder="30">
+                <small style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-top: 5px;">
+                    You'll be notified this many minutes before a task is due or an event starts
+                </small>
             </div>
             <button class="btn" onclick="window.saveSettings()">Save</button>
         </div>
@@ -1279,10 +1282,20 @@
         };
 
         // Notification System
-        window.showNotification = function(type, title, message, id) {
+        window.showNotification = async function(type, title, message, id) {
             const notifId = `${type}-${id}`;
-            if (window.notificationHistory.has(notifId)) return;
-            window.notificationHistory.add(notifId);
+            
+            // Check if already notified in database
+            const alreadyNotified = await window.db.notifiedItems.get(notifId);
+            if (alreadyNotified) {
+                console.log('Already notified:', notifId);
+                return;
+            }
+            
+            console.log('SHOWING NOTIFICATION:', title, message);
+            
+            // Mark as notified in database
+            await window.db.notifiedItems.put({ id: notifId, timestamp: Date.now() });
             
             // Play notification sound
             if (window.notificationSound) {
@@ -1400,45 +1413,111 @@
             
             const now = new Date();
             const estNow = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+            const notifyMinutes = parseInt(window.settings.eventNotifyMinutes) || 30;
             
-            // Check overdue tasks
+            console.log('=== CHECKING NOTIFICATIONS ===');
+            console.log('Current EST Time:', estNow);
+            console.log('Notification Window (minutes):', notifyMinutes);
+            console.log('Notifications Enabled:', window.settings.notificationsEnabled);
+            
+            // Check tasks
             const tasks = await window.db.tasks.toArray();
-            tasks.forEach(task => {
+            console.log('Total tasks found:', tasks.length);
+            
+            for (const task of tasks) {
+                console.log('---');
+                console.log('Task:', task.title);
+                console.log('Status:', task.status);
+                console.log('Due Date:', task.dueDate);
+                
                 if (task.status !== 'completed' && task.dueDate) {
                     const dueDate = new Date(task.dueDate);
-                    if (dueDate < estNow) {
-                        const hoursOverdue = Math.floor((estNow - dueDate) / (1000 * 60 * 60));
-                        window.showNotification(
+                    const timeDiffMs = dueDate - estNow;
+                    const minutesUntil = Math.floor(timeDiffMs / (1000 * 60));
+                    
+                    console.log('Due:', dueDate);
+                    console.log('Minutes until due:', minutesUntil);
+                    console.log('Should notify if minutes <=', notifyMinutes);
+                    
+                    // Task is overdue
+                    if (timeDiffMs < 0) {
+                        const hoursOverdue = Math.floor(Math.abs(timeDiffMs) / (1000 * 60 * 60));
+                        console.log('TASK IS OVERDUE - NOTIFYING');
+                        await window.showNotification(
                             'danger',
                             'Task Overdue',
                             `"${task.title}" was due ${hoursOverdue > 24 ? Math.floor(hoursOverdue / 24) + ' days' : hoursOverdue + ' hours'} ago`,
-                            task.id
+                            `task-overdue-${task.id}`
                         );
                     }
+                    // Task is upcoming
+                    else if (minutesUntil >= 0 && minutesUntil <= notifyMinutes) {
+                        console.log('TASK IS UPCOMING - NOTIFYING');
+                        const hoursUntil = Math.floor(minutesUntil / 60);
+                        const remainingMinutes = minutesUntil % 60;
+                        
+                        let timeMessage;
+                        if (hoursUntil > 0) {
+                            timeMessage = `${hoursUntil} hour${hoursUntil > 1 ? 's' : ''}${remainingMinutes > 0 ? ` ${remainingMinutes} min` : ''}`;
+                        } else {
+                            timeMessage = `${minutesUntil} minute${minutesUntil !== 1 ? 's' : ''}`;
+                        }
+                        
+                        await window.showNotification(
+                            'warning',
+                            'Task Due Soon',
+                            `"${task.title}" is due in ${timeMessage}`,
+                            `task-upcoming-${task.id}`
+                        );
+                    } else {
+                        console.log('Task not in notification window');
+                    }
                 }
-            });
+            }
             
-            // Check upcoming events
+            // Check calendar events
             const events = await window.db.events.toArray();
-            const notifyMinutes = window.settings.eventNotifyMinutes || 30;
-            const notifyMs = notifyMinutes * 60 * 1000;
+            console.log('Total events found:', events.length);
             
-            events.forEach(event => {
+            for (const event of events) {
+                console.log('---');
+                console.log('Event:', event.title);
+                console.log('Start Date:', event.start);
+                
                 if (event.start) {
                     const startDate = new Date(event.start);
-                    const timeDiff = startDate - estNow;
+                    const timeDiffMs = startDate - estNow;
+                    const minutesUntil = Math.floor(timeDiffMs / (1000 * 60));
                     
-                    if (timeDiff > 0 && timeDiff <= notifyMs) {
-                        const minutesUntil = Math.floor(timeDiff / (1000 * 60));
-                        window.showNotification(
+                    console.log('Starts:', startDate);
+                    console.log('Minutes until start:', minutesUntil);
+                    console.log('Should notify if minutes <=', notifyMinutes);
+                    
+                    // Event is upcoming
+                    if (minutesUntil >= 0 && minutesUntil <= notifyMinutes) {
+                        console.log('EVENT IS UPCOMING - NOTIFYING');
+                        const hoursUntil = Math.floor(minutesUntil / 60);
+                        const remainingMinutes = minutesUntil % 60;
+                        
+                        let timeMessage;
+                        if (hoursUntil > 0) {
+                            timeMessage = `${hoursUntil} hour${hoursUntil > 1 ? 's' : ''}${remainingMinutes > 0 ? ` ${remainingMinutes} min` : ''}`;
+                        } else {
+                            timeMessage = `${minutesUntil} minute${minutesUntil !== 1 ? 's' : ''}`;
+                        }
+                        
+                        await window.showNotification(
                             'warning',
                             'Upcoming Event',
-                            `"${event.title}" starts in ${minutesUntil} minutes`,
-                            event.id
+                            `"${event.title}" starts in ${timeMessage}`,
+                            `event-upcoming-${event.id}`
                         );
+                    } else {
+                        console.log('Event not in notification window');
                     }
                 }
-            });
+            }
+            console.log('=== END CHECK ===');
         };
 
         window.startNotificationSystem = function() {
