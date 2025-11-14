@@ -1411,16 +1411,23 @@
             const notifyMinutes = window.settings.eventNotifyMinutes || 30;
             const notifyMs = notifyMinutes * 60 * 1000;
             
+            console.log('Checking notifications...', 'EST Now:', estNow);
+            
             // Check tasks
             const tasks = await window.db.tasks.toArray();
+            console.log('Found tasks:', tasks);
+            
             tasks.forEach(task => {
                 if (task.status !== 'completed' && task.dueDate) {
                     const dueDate = new Date(task.dueDate);
                     const timeDiff = dueDate - estNow;
                     
+                    console.log(`Task "${task.title}": Due ${dueDate}, Time diff: ${Math.floor(timeDiff / 60000)} minutes`);
+                    
                     // Task is overdue - notify about being overdue
                     if (timeDiff < 0) {
                         const hoursOverdue = Math.floor(Math.abs(timeDiff) / (1000 * 60 * 60));
+                        console.log('Task is overdue, notifying...');
                         window.showNotification(
                             'danger',
                             'Task Overdue',
@@ -1428,56 +1435,68 @@
                             `task-overdue-${task.id}`
                         );
                     }
-                    // Task is upcoming - notify based on settings
-                    else if (timeDiff > 0 && timeDiff <= notifyMs) {
+                    // Task is upcoming - notify if it's within the notification window OR if it's due sooner than the window
+                    else if (timeDiff > 0) {
                         const minutesUntil = Math.floor(timeDiff / (1000 * 60));
-                        const hoursUntil = Math.floor(minutesUntil / 60);
-                        const remainingMinutes = minutesUntil % 60;
                         
-                        let timeMessage;
-                        if (hoursUntil > 0) {
-                            timeMessage = `${hoursUntil} hour${hoursUntil > 1 ? 's' : ''}${remainingMinutes > 0 ? ` ${remainingMinutes} min` : ''}`;
-                        } else {
-                            timeMessage = `${minutesUntil} minute${minutesUntil !== 1 ? 's' : ''}`;
+                        // Notify if: within notification window OR task exists and is due soon
+                        if (timeDiff <= notifyMs || minutesUntil <= 60) {
+                            const hoursUntil = Math.floor(minutesUntil / 60);
+                            const remainingMinutes = minutesUntil % 60;
+                            
+                            let timeMessage;
+                            if (hoursUntil > 0) {
+                                timeMessage = `${hoursUntil} hour${hoursUntil > 1 ? 's' : ''}${remainingMinutes > 0 ? ` ${remainingMinutes} min` : ''}`;
+                            } else {
+                                timeMessage = `${minutesUntil} minute${minutesUntil !== 1 ? 's' : ''}`;
+                            }
+                            
+                            console.log('Task is upcoming, notifying...');
+                            window.showNotification(
+                                'warning',
+                                'Task Due Soon',
+                                `"${task.title}" is due in ${timeMessage}`,
+                                `task-upcoming-${task.id}-${Math.floor(timeDiff / 60000)}`
+                            );
                         }
-                        
-                        window.showNotification(
-                            'warning',
-                            'Task Due Soon',
-                            `"${task.title}" is due in ${timeMessage}`,
-                            `task-upcoming-${task.id}-${notifyMinutes}`
-                        );
                     }
                 }
             });
             
             // Check calendar events (only upcoming, never overdue)
             const events = await window.db.events.toArray();
+            console.log('Found events:', events);
             
             events.forEach(event => {
                 if (event.start) {
                     const startDate = new Date(event.start);
                     const timeDiff = startDate - estNow;
                     
-                    // Only notify if event is in the future and within notification window
-                    if (timeDiff > 0 && timeDiff <= notifyMs) {
+                    console.log(`Event "${event.title}": Starts ${startDate}, Time diff: ${Math.floor(timeDiff / 60000)} minutes`);
+                    
+                    // Notify if event is in the future and within notification window OR if it starts sooner than the window
+                    if (timeDiff > 0) {
                         const minutesUntil = Math.floor(timeDiff / (1000 * 60));
-                        const hoursUntil = Math.floor(minutesUntil / 60);
-                        const remainingMinutes = minutesUntil % 60;
                         
-                        let timeMessage;
-                        if (hoursUntil > 0) {
-                            timeMessage = `${hoursUntil} hour${hoursUntil > 1 ? 's' : ''}${remainingMinutes > 0 ? ` ${remainingMinutes} min` : ''}`;
-                        } else {
-                            timeMessage = `${minutesUntil} minute${minutesUntil !== 1 ? 's' : ''}`;
+                        if (timeDiff <= notifyMs || minutesUntil <= 60) {
+                            const hoursUntil = Math.floor(minutesUntil / 60);
+                            const remainingMinutes = minutesUntil % 60;
+                            
+                            let timeMessage;
+                            if (hoursUntil > 0) {
+                                timeMessage = `${hoursUntil} hour${hoursUntil > 1 ? 's' : ''}${remainingMinutes > 0 ? ` ${remainingMinutes} min` : ''}`;
+                            } else {
+                                timeMessage = `${minutesUntil} minute${minutesUntil !== 1 ? 's' : ''}`;
+                            }
+                            
+                            console.log('Event is upcoming, notifying...');
+                            window.showNotification(
+                                'warning',
+                                'Upcoming Event',
+                                `"${event.title}" starts in ${timeMessage}`,
+                                `event-upcoming-${event.id}-${Math.floor(timeDiff / 60000)}`
+                            );
                         }
-                        
-                        window.showNotification(
-                            'warning',
-                            'Upcoming Event',
-                            `"${event.title}" starts in ${timeMessage}`,
-                            `event-upcoming-${event.id}-${notifyMinutes}`
-                        );
                     }
                 }
             });
