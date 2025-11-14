@@ -836,8 +836,11 @@
                 </label>
             </div>
             <div class="form-group">
-                <label>Notify before events (minutes)</label>
+                <label>Remind me before tasks/events (minutes)</label>
                 <input type="number" id="eventNotifyMinutes" min="1" max="1440" placeholder="30">
+                <small style="color: var(--text-secondary); font-size: 0.85rem; display: block; margin-top: 5px;">
+                    You'll be notified this many minutes before a task is due or an event starts
+                </small>
             </div>
             <button class="btn" onclick="window.saveSettings()">Save</button>
         </div>
@@ -863,7 +866,8 @@
                 tasks: '++id, title, status, priority, dueDate, createdAt',
                 events: '++id, title, start, end, createdAt',
                 bookmarks: '++id, title, url, createdAt',
-                settings: 'id'
+                settings: 'id',
+                notifiedItems: 'id'
             });
 
             const stored = await window.db.settings.get(1);
@@ -1278,10 +1282,15 @@
         };
 
         // Notification System
-        window.showNotification = function(type, title, message, id) {
+        window.showNotification = async function(type, title, message, id) {
             const notifId = `${type}-${id}`;
-            if (window.notificationHistory.has(notifId)) return;
-            window.notificationHistory.add(notifId);
+            
+            // Check if already notified in database
+            const alreadyNotified = await window.db.notifiedItems.get(notifId);
+            if (alreadyNotified) return;
+            
+            // Mark as notified in database
+            await window.db.notifiedItems.put({ id: notifId, timestamp: Date.now() });
             
             // Play notification sound
             if (window.notificationSound) {
@@ -1399,41 +1408,75 @@
             
             const now = new Date();
             const estNow = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+            const notifyMinutes = window.settings.eventNotifyMinutes || 30;
+            const notifyMs = notifyMinutes * 60 * 1000;
             
-            // Check overdue tasks
+            // Check tasks
             const tasks = await window.db.tasks.toArray();
             tasks.forEach(task => {
                 if (task.status !== 'completed' && task.dueDate) {
                     const dueDate = new Date(task.dueDate);
-                    if (dueDate < estNow) {
-                        const hoursOverdue = Math.floor((estNow - dueDate) / (1000 * 60 * 60));
+                    const timeDiff = dueDate - estNow;
+                    
+                    // Task is overdue - notify about being overdue
+                    if (timeDiff < 0) {
+                        const hoursOverdue = Math.floor(Math.abs(timeDiff) / (1000 * 60 * 60));
                         window.showNotification(
                             'danger',
                             'Task Overdue',
                             `"${task.title}" was due ${hoursOverdue > 24 ? Math.floor(hoursOverdue / 24) + ' days' : hoursOverdue + ' hours'} ago`,
-                            task.id
+                            `task-overdue-${task.id}`
+                        );
+                    }
+                    // Task is upcoming - notify based on settings
+                    else if (timeDiff > 0 && timeDiff <= notifyMs) {
+                        const minutesUntil = Math.floor(timeDiff / (1000 * 60));
+                        const hoursUntil = Math.floor(minutesUntil / 60);
+                        const remainingMinutes = minutesUntil % 60;
+                        
+                        let timeMessage;
+                        if (hoursUntil > 0) {
+                            timeMessage = `${hoursUntil} hour${hoursUntil > 1 ? 's' : ''}${remainingMinutes > 0 ? ` ${remainingMinutes} min` : ''}`;
+                        } else {
+                            timeMessage = `${minutesUntil} minute${minutesUntil !== 1 ? 's' : ''}`;
+                        }
+                        
+                        window.showNotification(
+                            'warning',
+                            'Task Due Soon',
+                            `"${task.title}" is due in ${timeMessage}`,
+                            `task-upcoming-${task.id}-${notifyMinutes}`
                         );
                     }
                 }
             });
             
-            // Check upcoming events
+            // Check calendar events (only upcoming, never overdue)
             const events = await window.db.events.toArray();
-            const notifyMinutes = window.settings.eventNotifyMinutes || 30;
-            const notifyMs = notifyMinutes * 60 * 1000;
             
             events.forEach(event => {
                 if (event.start) {
                     const startDate = new Date(event.start);
                     const timeDiff = startDate - estNow;
                     
+                    // Only notify if event is in the future and within notification window
                     if (timeDiff > 0 && timeDiff <= notifyMs) {
                         const minutesUntil = Math.floor(timeDiff / (1000 * 60));
+                        const hoursUntil = Math.floor(minutesUntil / 60);
+                        const remainingMinutes = minutesUntil % 60;
+                        
+                        let timeMessage;
+                        if (hoursUntil > 0) {
+                            timeMessage = `${hoursUntil} hour${hoursUntil > 1 ? 's' : ''}${remainingMinutes > 0 ? ` ${remainingMinutes} min` : ''}`;
+                        } else {
+                            timeMessage = `${minutesUntil} minute${minutesUntil !== 1 ? 's' : ''}`;
+                        }
+                        
                         window.showNotification(
                             'warning',
                             'Upcoming Event',
-                            `"${event.title}" starts in ${minutesUntil} minutes`,
-                            event.id
+                            `"${event.title}" starts in ${timeMessage}`,
+                            `event-upcoming-${event.id}-${notifyMinutes}`
                         );
                     }
                 }
