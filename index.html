@@ -1115,6 +1115,7 @@
             document.getElementById('itemModal').classList.add('active');
             document.getElementById('itemForm').reset();
             document.getElementById('itemContent').innerHTML = '';
+            document.getElementById('itemTitle').innerHTML = '';
             
             document.getElementById('contentGroup').style.display = window.currentView === 'notes' ? 'block' : 'none';
             document.getElementById('progressGroup').style.display = window.currentView === 'notes' || window.currentView === 'tasks' ? 'block' : 'none';
@@ -1279,12 +1280,10 @@
         };
 
         // Notification System
-        window.showNotification = function(type, title, message, id) {
-            const notifId = `${type}-${id}`;
-            if (window.notificationHistory.has(notifId)) return;
-            window.notificationHistory.add(notifId);
+        window.showNotification = function(type, title, message, uniqueId) {
+            if (window.notificationHistory.has(uniqueId)) return;
+            window.notificationHistory.add(uniqueId);
             
-            // Play notification sound
             if (window.notificationSound) {
                 try {
                     window.notificationSound();
@@ -1293,7 +1292,6 @@
                 }
             }
             
-            // Add to log
             const logEntry = {
                 type,
                 title,
@@ -1304,13 +1302,12 @@
                     minute: '2-digit',
                     second: '2-digit'
                 }),
-                id: notifId
+                id: uniqueId
             };
             window.notificationLog.unshift(logEntry);
             window.updateNotificationLog();
             window.updateNotificationBadge();
             
-            // Show popup notification
             const container = document.getElementById('notificationContainer');
             const notif = document.createElement('div');
             notif.className = `notification ${type}`;
@@ -1400,41 +1397,59 @@
             
             const now = new Date();
             const estNow = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+            const notifyMinutes = window.settings.eventNotifyMinutes || 30;
+            const notifyMs = notifyMinutes * 60 * 1000;
             
-            // Check overdue tasks
             const tasks = await window.db.tasks.toArray();
             tasks.forEach(task => {
                 if (task.status !== 'completed' && task.dueDate) {
                     const dueDate = new Date(task.dueDate);
-                    if (dueDate < estNow) {
+                    const timeDiff = dueDate - estNow;
+                    
+                    if (timeDiff < 0) {
                         const hoursOverdue = Math.floor((estNow - dueDate) / (1000 * 60 * 60));
                         window.showNotification(
                             'danger',
                             'Task Overdue',
                             `"${task.title}" was due ${hoursOverdue > 24 ? Math.floor(hoursOverdue / 24) + ' days' : hoursOverdue + ' hours'} ago`,
-                            task.id
+                            `task-overdue-${task.id}`
+                        );
+                    } else if (timeDiff <= notifyMs) {
+                        const minutesUntil = Math.floor(timeDiff / (1000 * 60));
+                        window.showNotification(
+                            'warning',
+                            'Task Due Soon',
+                            `"${task.title}" is due in ${minutesUntil} minute${minutesUntil !== 1 ? 's' : ''}`,
+                            `task-upcoming-${task.id}`
                         );
                     }
                 }
             });
             
-            // Check upcoming events
             const events = await window.db.events.toArray();
-            const notifyMinutes = window.settings.eventNotifyMinutes || 30;
-            const notifyMs = notifyMinutes * 60 * 1000;
             
             events.forEach(event => {
                 if (event.start) {
                     const startDate = new Date(event.start);
                     const timeDiff = startDate - estNow;
                     
-                    if (timeDiff > 0 && timeDiff <= notifyMs) {
+                    if (timeDiff < 0) {
+                        const minutesAgo = Math.floor((estNow - startDate) / (1000 * 60));
+                        if (minutesAgo < 60) {
+                            window.showNotification(
+                                'info',
+                                'Event In Progress',
+                                `"${event.title}" started ${minutesAgo} minute${minutesAgo !== 1 ? 's' : ''} ago`,
+                                `event-started-${event.id}`
+                            );
+                        }
+                    } else if (timeDiff <= notifyMs) {
                         const minutesUntil = Math.floor(timeDiff / (1000 * 60));
                         window.showNotification(
                             'warning',
                             'Upcoming Event',
-                            `"${event.title}" starts in ${minutesUntil} minutes`,
-                            event.id
+                            `"${event.title}" starts in ${minutesUntil} minute${minutesUntil !== 1 ? 's' : ''}`,
+                            `event-upcoming-${event.id}`
                         );
                     }
                 }
@@ -1446,10 +1461,15 @@
                 clearInterval(window.notificationCheckInterval);
             }
             window.checkNotifications();
-            window.notificationCheckInterval = setInterval(window.checkNotifications, 60000);
+            window.notificationCheckInterval = setInterval(window.checkNotifications, 30000);
         };
+        
+        window.clearNotificationHistory = function() {
+            window.notificationHistory.clear();
+        };
+        
+        setInterval(window.clearNotificationHistory, 300000);
 
-        // Export data
         window.exportData = async function() {
             const data = {
                 notes: await window.db.notes.toArray(),
@@ -1467,7 +1487,6 @@
             URL.revokeObjectURL(url);
         };
 
-        // Import data
         window.importData = function() {
             const input = document.createElement('input');
             input.type = 'file';
@@ -1491,7 +1510,6 @@
             input.click();
         };
 
-        // Settings
         window.openSettings = function() {
             document.getElementById('settingsModal').classList.add('active');
             document.getElementById('notificationsEnabled').checked = window.settings.notificationsEnabled !== false;
@@ -1513,7 +1531,6 @@
             alert('Settings saved!');
         };
 
-        // Search
         document.getElementById('searchBar').addEventListener('input', async (e) => {
             const query = e.target.value.toLowerCase();
             if (!query) {
@@ -1537,7 +1554,6 @@
             }
         });
 
-        // Initialize
         window.addEventListener('DOMContentLoaded', async () => {
             console.log('Page loaded, initializing...');
             await initDB();
@@ -1548,7 +1564,6 @@
             console.log('App ready!');
         });
 
-        // EST Clock
         function updateESTClock() {
             const now = new Date();
             const estTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
@@ -1560,7 +1575,6 @@
             document.getElementById('estClock').textContent = `${displayHours}:${minutes}:${seconds} ${ampm} EST`;
         }
 
-        // Strikethrough functionality
         window.toggleStrikethroughTitle = function() {
             const selection = window.getSelection();
             if (!selection.rangeCount || selection.isCollapsed) {
@@ -1621,7 +1635,6 @@
             }
         };
 
-        // Delete item
         window.deleteItem = async function(id) {
             console.log('Delete called for id:', id, 'in view:', window.currentView);
             if (!confirm("Delete this item permanently?")) return;
