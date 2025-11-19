@@ -151,7 +151,6 @@
             padding: 20px;
             cursor: pointer;
             transition: all 0.3s ease;
-            user-select: none;
         }
 
         .card:hover {
@@ -159,21 +158,15 @@
             box-shadow: 0 8px 16px rgba(0,0,0,0.15);
         }
 
-        .card[draggable="true"] {
-            cursor: move;
-        }
-
         .card.dragging {
             opacity: 0.5;
             transform: scale(0.95);
-            cursor: grabbing;
         }
 
         .card.drag-over {
             transform: translateY(-8px) scale(1.05);
-            box-shadow: 0 12px 24px rgba(74, 144, 226, 0.4);
+            box-shadow: 0 12px 24px rgba(102, 126, 234, 0.3);
             border: 2px solid var(--accent);
-            background: var(--bg-tertiary);
         }
 
         .card h3 {
@@ -1214,29 +1207,23 @@
                         card.dataset.bookmarkId = bookmark.id;
                         card.dataset.position = bookmark.position !== undefined ? bookmark.position : index;
                         
-                        // Add drag event listeners
-                        card.ondragstart = handleDragStart;
-                        card.ondragend = handleDragEnd;
-                        card.ondragover = handleDragOver;
-                        card.ondrop = handleDrop;
-                        card.ondragleave = handleDragLeave;
-                        card.ondragenter = handleDragEnter;
+                        card.addEventListener('dragstart', handleDragStart);
+                        card.addEventListener('dragend', handleDragEnd);
+                        card.addEventListener('dragover', handleDragOver);
+                        card.addEventListener('drop', handleDrop);
+                        card.addEventListener('dragleave', handleDragLeave);
+                        card.addEventListener('dragenter', handleDragEnter);
                         
-                        const cardContent = document.createElement('div');
-                        cardContent.style.pointerEvents = 'none';
-                        cardContent.innerHTML = `
-                            <h3>${bookmark.title}</h3>
+                        card.innerHTML = `
+                            <h3 style="pointer-events: none;">${bookmark.title}</h3>
                             <a href="${bookmark.url}" target="_blank" style="color: var(--accent); word-break: break-all; pointer-events: auto;">${bookmark.url}</a>
                         `;
-                        card.appendChild(cardContent);
-                        
-                        const buttonContainer = document.createElement('div');
-                        buttonContainer.style.marginTop = '10px';
-                        buttonContainer.style.pointerEvents = 'auto';
                         
                         const delBtn = document.createElement('button');
                         delBtn.textContent = '🗑️ Delete';
                         delBtn.className = 'btn btn-small btn-secondary';
+                        delBtn.style.marginTop = '10px';
+                        delBtn.style.pointerEvents = 'auto';
                         delBtn.dataset.bookmarkId = bookmark.id;
                         delBtn.onclick = function(e) {
                             e.preventDefault();
@@ -1254,20 +1241,21 @@
                                 });
                             }
                         };
-                        buttonContainer.appendChild(delBtn);
+                        card.appendChild(delBtn);
                         
                         const editBtn = document.createElement('button');
                         editBtn.textContent = '✏️ Edit';
                         editBtn.className = 'btn btn-small';
+                        editBtn.style.marginTop = '10px';
                         editBtn.style.marginLeft = '5px';
+                        editBtn.style.pointerEvents = 'auto';
                         editBtn.onclick = function(e) {
                             e.preventDefault();
                             e.stopPropagation();
                             window.editItem(bookmark.id);
                         };
-                        buttonContainer.appendChild(editBtn);
+                        card.appendChild(editBtn);
                         
-                        card.appendChild(buttonContainer);
                         grid.appendChild(card);
                     });
                 }
