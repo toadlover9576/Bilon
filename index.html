@@ -941,6 +941,93 @@
             window.renderView();
         };
 
+        // Drag and Drop functionality for bookmarks
+        let draggedElement = null;
+        let draggedId = null;
+
+        function handleDragStart(e) {
+            draggedElement = this;
+            draggedId = parseInt(this.dataset.bookmarkId);
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', draggedId);
+            console.log('Drag started for bookmark:', draggedId);
+        }
+
+        function handleDragEnd(e) {
+            this.classList.remove('dragging');
+            document.querySelectorAll('.card').forEach(card => {
+                card.classList.remove('drag-over');
+            });
+            console.log('Drag ended');
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        }
+
+        function handleDragEnter(e) {
+            if (this !== draggedElement && this.classList.contains('card')) {
+                this.classList.add('drag-over');
+            }
+        }
+
+        function handleDragLeave(e) {
+            if (e.target === this) {
+                this.classList.remove('drag-over');
+            }
+        }
+
+        async function handleDrop(e) {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+
+            this.classList.remove('drag-over');
+
+            if (draggedElement !== this && this.classList.contains('card')) {
+                const targetId = parseInt(this.dataset.bookmarkId);
+                console.log('Dropping bookmark', draggedId, 'onto', targetId);
+                await swapBookmarkPositions(draggedId, targetId);
+            }
+
+            return false;
+        }
+
+        async function swapBookmarkPositions(id1, id2) {
+            try {
+                console.log('Swapping positions for bookmarks:', id1, id2);
+                const bookmark1 = await window.db.bookmarks.get(id1);
+                const bookmark2 = await window.db.bookmarks.get(id2);
+
+                if (!bookmark1 || !bookmark2) {
+                    console.error('Could not find bookmarks');
+                    return;
+                }
+
+                const pos1 = bookmark1.position !== undefined ? bookmark1.position : 0;
+                const pos2 = bookmark2.position !== undefined ? bookmark2.position : 0;
+
+                console.log('Swapping positions:', pos1, 'and', pos2);
+
+                await window.db.bookmarks.update(id1, { position: pos2 });
+                await window.db.bookmarks.update(id2, { position: pos1 });
+
+                console.log('Positions swapped, re-rendering...');
+                await window.renderView();
+            } catch (err) {
+                console.error('Error swapping positions:', err);
+                alert('Error swapping positions: ' + err.message);
+            }
+        }
+
         // Render view
         window.renderView = async function() {
             console.log('Rendering view:', window.currentView);
@@ -1120,12 +1207,12 @@
                         card.dataset.bookmarkId = bookmark.id;
                         card.dataset.position = bookmark.position !== undefined ? bookmark.position : index;
                         
-                        card.ondragstart = handleDragStart;
-                        card.ondragend = handleDragEnd;
-                        card.ondragover = handleDragOver;
-                        card.ondrop = handleDrop;
-                        card.ondragleave = handleDragLeave;
-                        card.ondragenter = handleDragEnter;
+                        card.addEventListener('dragstart', handleDragStart);
+                        card.addEventListener('dragend', handleDragEnd);
+                        card.addEventListener('dragover', handleDragOver);
+                        card.addEventListener('drop', handleDrop);
+                        card.addEventListener('dragleave', handleDragLeave);
+                        card.addEventListener('dragenter', handleDragEnter);
                         
                         card.innerHTML = `
                             <h3 style="pointer-events: none;">${bookmark.title}</h3>
@@ -1739,93 +1826,6 @@
                 alert('Error deleting item: ' + err.message);
             }
         };
-
-        // Drag and Drop functionality for bookmarks
-        let draggedElement = null;
-        let draggedId = null;
-
-        function handleDragStart(e) {
-            draggedElement = this;
-            draggedId = parseInt(this.dataset.bookmarkId);
-            this.classList.add('dragging');
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', draggedId);
-            console.log('Drag started for bookmark:', draggedId);
-        }
-
-        function handleDragEnd(e) {
-            this.classList.remove('dragging');
-            document.querySelectorAll('.card').forEach(card => {
-                card.classList.remove('drag-over');
-            });
-            console.log('Drag ended');
-        }
-
-        function handleDragOver(e) {
-            if (e.preventDefault) {
-                e.preventDefault();
-            }
-            e.dataTransfer.dropEffect = 'move';
-            return false;
-        }
-
-        function handleDragEnter(e) {
-            if (this !== draggedElement && this.classList.contains('card')) {
-                this.classList.add('drag-over');
-            }
-        }
-
-        function handleDragLeave(e) {
-            if (e.target === this) {
-                this.classList.remove('drag-over');
-            }
-        }
-
-        async function handleDrop(e) {
-            if (e.stopPropagation) {
-                e.stopPropagation();
-            }
-            if (e.preventDefault) {
-                e.preventDefault();
-            }
-
-            this.classList.remove('drag-over');
-
-            if (draggedElement !== this && this.classList.contains('card')) {
-                const targetId = parseInt(this.dataset.bookmarkId);
-                console.log('Dropping bookmark', draggedId, 'onto', targetId);
-                await swapBookmarkPositions(draggedId, targetId);
-            }
-
-            return false;
-        }
-
-        async function swapBookmarkPositions(id1, id2) {
-            try {
-                console.log('Swapping positions for bookmarks:', id1, id2);
-                const bookmark1 = await window.db.bookmarks.get(id1);
-                const bookmark2 = await window.db.bookmarks.get(id2);
-
-                if (!bookmark1 || !bookmark2) {
-                    console.error('Could not find bookmarks');
-                    return;
-                }
-
-                const pos1 = bookmark1.position !== undefined ? bookmark1.position : 0;
-                const pos2 = bookmark2.position !== undefined ? bookmark2.position : 0;
-
-                console.log('Swapping positions:', pos1, 'and', pos2);
-
-                await window.db.bookmarks.update(id1, { position: pos2 });
-                await window.db.bookmarks.update(id2, { position: pos1 });
-
-                console.log('Positions swapped, re-rendering...');
-                await window.renderView();
-            } catch (err) {
-                console.error('Error swapping positions:', err);
-                alert('Error swapping positions: ' + err.message);
-            }
-        }
 
     </script>
 </body>
