@@ -1120,27 +1120,25 @@
                         card.dataset.bookmarkId = bookmark.id;
                         card.dataset.position = bookmark.position !== undefined ? bookmark.position : index;
                         
-                        card.addEventListener('dragstart', handleDragStart);
-                        card.addEventListener('dragend', handleDragEnd);
-                        card.addEventListener('dragover', handleDragOver);
-                        card.addEventListener('drop', handleDrop);
-                        card.addEventListener('dragleave', handleDragLeave);
-                        card.addEventListener('dragenter', handleDragEnter);
+                        card.ondragstart = handleDragStart;
+                        card.ondragend = handleDragEnd;
+                        card.ondragover = handleDragOver;
+                        card.ondrop = handleDrop;
+                        card.ondragleave = handleDragLeave;
+                        card.ondragenter = handleDragEnter;
                         
-                        const cardContent = document.createElement('div');
-                        cardContent.innerHTML = `
-                            <h3>${bookmark.title}</h3>
-                            <a href="${bookmark.url}" target="_blank" onclick="event.stopPropagation()" style="color: var(--accent); word-break: break-all;">${bookmark.url}</a>
+                        card.innerHTML = `
+                            <h3 style="pointer-events: none;">${bookmark.title}</h3>
+                            <a href="${bookmark.url}" target="_blank" style="color: var(--accent); word-break: break-all; pointer-events: auto;">${bookmark.url}</a>
                         `;
-                        cardContent.onclick = () => window.editItem(bookmark.id);
-                        card.appendChild(cardContent);
                         
                         const delBtn = document.createElement('button');
                         delBtn.textContent = '🗑️ Delete';
                         delBtn.className = 'btn btn-small btn-secondary';
                         delBtn.style.marginTop = '10px';
+                        delBtn.style.pointerEvents = 'auto';
                         delBtn.dataset.bookmarkId = bookmark.id;
-                        delBtn.addEventListener('click', function(e) {
+                        delBtn.onclick = function(e) {
                             e.preventDefault();
                             e.stopPropagation();
                             const id = parseInt(this.dataset.bookmarkId);
@@ -1155,8 +1153,22 @@
                                     alert('Delete failed: ' + err.message);
                                 });
                             }
-                        });
+                        };
                         card.appendChild(delBtn);
+                        
+                        const editBtn = document.createElement('button');
+                        editBtn.textContent = '✏️ Edit';
+                        editBtn.className = 'btn btn-small';
+                        editBtn.style.marginTop = '10px';
+                        editBtn.style.marginLeft = '5px';
+                        editBtn.style.pointerEvents = 'auto';
+                        editBtn.onclick = function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            window.editItem(bookmark.id);
+                        };
+                        card.appendChild(editBtn);
+                        
                         grid.appendChild(card);
                     });
                 }
