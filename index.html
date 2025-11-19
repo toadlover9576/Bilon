@@ -873,9 +873,25 @@
                 notes: '++id, title, createdAt, updatedAt',
                 tasks: '++id, title, status, priority, dueDate, createdAt',
                 events: '++id, title, start, end, createdAt',
+                bookmarks: '++id, title, url, createdAt',
+                settings: 'id',
+                notifiedItems: 'id'
+            });
+            
+            // Add version 2 with position field
+            window.db.version(2).stores({
+                notes: '++id, title, createdAt, updatedAt',
+                tasks: '++id, title, status, priority, dueDate, createdAt',
+                events: '++id, title, start, end, createdAt',
                 bookmarks: '++id, title, url, createdAt, position',
                 settings: 'id',
                 notifiedItems: 'id'
+            }).upgrade(async tx => {
+                // Migrate existing bookmarks to have position
+                const bookmarks = await tx.table('bookmarks').toArray();
+                for (let i = 0; i < bookmarks.length; i++) {
+                    await tx.table('bookmarks').update(bookmarks[i].id, { position: i });
+                }
             });
 
             const stored = await window.db.settings.get(1);
