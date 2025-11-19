@@ -1097,12 +1097,28 @@
                 } else if (window.currentView === 'bookmarks') {
                     const bookmarks = await window.db.bookmarks.orderBy('position').toArray();
                     console.log('Bookmarks:', bookmarks);
+                    
+                    // Ensure all bookmarks have a position
+                    let needsUpdate = false;
+                    for (let i = 0; i < bookmarks.length; i++) {
+                        if (bookmarks[i].position === undefined || bookmarks[i].position === null) {
+                            await window.db.bookmarks.update(bookmarks[i].id, { position: i });
+                            needsUpdate = true;
+                        }
+                    }
+                    
+                    if (needsUpdate) {
+                        const updatedBookmarks = await window.db.bookmarks.orderBy('position').toArray();
+                        bookmarks.length = 0;
+                        bookmarks.push(...updatedBookmarks);
+                    }
+                    
                     bookmarks.forEach((bookmark, index) => {
                         const card = document.createElement('div');
                         card.className = 'card';
                         card.draggable = true;
                         card.dataset.bookmarkId = bookmark.id;
-                        card.dataset.position = index;
+                        card.dataset.position = bookmark.position !== undefined ? bookmark.position : index;
                         
                         card.addEventListener('dragstart', handleDragStart);
                         card.addEventListener('dragend', handleDragEnd);
@@ -1111,11 +1127,14 @@
                         card.addEventListener('dragleave', handleDragLeave);
                         card.addEventListener('dragenter', handleDragEnter);
                         
-                        card.onclick = () => window.editItem(bookmark.id);
-                        card.innerHTML = `
+                        const cardContent = document.createElement('div');
+                        cardContent.innerHTML = `
                             <h3>${bookmark.title}</h3>
                             <a href="${bookmark.url}" target="_blank" onclick="event.stopPropagation()" style="color: var(--accent); word-break: break-all;">${bookmark.url}</a>
                         `;
+                        cardContent.onclick = () => window.editItem(bookmark.id);
+                        card.appendChild(cardContent);
+                        
                         const delBtn = document.createElement('button');
                         delBtn.textContent = '🗑️ Delete';
                         delBtn.className = 'btn btn-small btn-secondary';
@@ -1718,7 +1737,8 @@
             draggedId = parseInt(this.dataset.bookmarkId);
             this.classList.add('dragging');
             e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/html', this.innerHTML);
+            e.dataTransfer.setData('text/plain', draggedId);
+            console.log('Drag started for bookmark:', draggedId);
         }
 
         function handleDragEnd(e) {
@@ -1726,6 +1746,7 @@
             document.querySelectorAll('.card').forEach(card => {
                 card.classList.remove('drag-over');
             });
+            console.log('Drag ended');
         }
 
         function handleDragOver(e) {
@@ -1737,23 +1758,31 @@
         }
 
         function handleDragEnter(e) {
-            if (this !== draggedElement) {
+            if (this !== draggedElement && this.classList.contains('card')) {
                 this.classList.add('drag-over');
             }
         }
 
         function handleDragLeave(e) {
-            this.classList.remove('drag-over');
+            if (e.target === this) {
+                this.classList.remove('drag-over');
+            }
         }
 
-        function handleDrop(e) {
+        async function handleDrop(e) {
             if (e.stopPropagation) {
                 e.stopPropagation();
             }
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
 
-            if (draggedElement !== this) {
+            this.classList.remove('drag-over');
+
+            if (draggedElement !== this && this.classList.contains('card')) {
                 const targetId = parseInt(this.dataset.bookmarkId);
-                swapBookmarkPositions(draggedId, targetId);
+                console.log('Dropping bookmark', draggedId, 'onto', targetId);
+                await swapBookmarkPositions(draggedId, targetId);
             }
 
             return false;
@@ -1761,16 +1790,28 @@
 
         async function swapBookmarkPositions(id1, id2) {
             try {
+                console.log('Swapping positions for bookmarks:', id1, id2);
                 const bookmark1 = await window.db.bookmarks.get(id1);
                 const bookmark2 = await window.db.bookmarks.get(id2);
 
-                const tempPosition = bookmark1.position;
-                await window.db.bookmarks.update(id1, { position: bookmark2.position });
-                await window.db.bookmarks.update(id2, { position: tempPosition });
+                if (!bookmark1 || !bookmark2) {
+                    console.error('Could not find bookmarks');
+                    return;
+                }
 
+                const pos1 = bookmark1.position !== undefined ? bookmark1.position : 0;
+                const pos2 = bookmark2.position !== undefined ? bookmark2.position : 0;
+
+                console.log('Swapping positions:', pos1, 'and', pos2);
+
+                await window.db.bookmarks.update(id1, { position: pos2 });
+                await window.db.bookmarks.update(id2, { position: pos1 });
+
+                console.log('Positions swapped, re-rendering...');
                 await window.renderView();
             } catch (err) {
                 console.error('Error swapping positions:', err);
+                alert('Error swapping positions: ' + err.message);
             }
         }
 
