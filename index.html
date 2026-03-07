@@ -656,6 +656,25 @@
         </div>
     </div>
 
+    <!-- ═══ RECOVER CONFIRM MODAL ═══ -->
+    <div class="modal" id="recoverConfirmModal">
+        <div class="modal-content" style="max-width:460px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:16px;">
+                <h3>🔄 Recover Old Data</h3>
+                <button style="border:none;background:none;font-size:1.5rem;cursor:pointer;color:var(--text-primary);" onclick="document.getElementById('recoverConfirmModal').classList.remove('active')">&times;</button>
+            </div>
+            <div style="background:rgba(230,126,34,0.1);border:1px solid rgba(230,126,34,0.4);border-radius:8px;padding:14px;margin-bottom:16px;font-size:0.88rem;color:#c0672a;">
+                ⚠️ This will scan for old Bilon data and <strong>add it into your current slot</strong>. If you don't want it mixed in, switch to a fresh slot first.
+            </div>
+            <p style="font-size:0.9rem;margin-bottom:6px;">Current slot: <strong id="recoverTargetSlotName"></strong></p>
+            <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:20px;">An <strong>Undo</strong> button will appear immediately after so you can reverse it if it pulls in the wrong data.</p>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button class="btn btn-secondary" onclick="document.getElementById('recoverConfirmModal').classList.remove('active')">Cancel</button>
+                <button class="btn" style="background:#e67e22;" onclick="window.confirmRecover()">🔄 Yes, Recover Into This Slot</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ═══ SETTINGS MODAL ═══ -->
     <div class="modal" id="settingsModal">
         <div class="modal-content" style="max-width:460px;">
@@ -745,117 +764,148 @@
     //  INIT
     // ═══════════════════════════════════════════════════════════
 
-    window.forceRecover = async function() {
-        const targetSlotId = getCurrentSlotId();
-        const targetDB = window.db;
-        let totalMigrated = 0;
+    // Stores a pre-recovery snapshot so we can undo
+    window._recoverySnapshot = null;
+    window._recoveryAddedIds = null;
 
-        // Try every possible old DB name
+    window.forceRecover = function() {
+        // Show current slot name in the modal
+        const slots = loadSlotsMeta();
+        const slot = slots.find(s => s.id === getCurrentSlotId());
+        document.getElementById('recoverTargetSlotName').textContent = slot ? slot.name : 'Default';
+        document.getElementById('recoverConfirmModal').classList.add('active');
+    };
+
+    window.confirmRecover = async function() {
+        document.getElementById('recoverConfirmModal').classList.remove('active');
+        const targetDB = window.db;
+
+        // Step 2: snapshot current slot BEFORE we add anything (so undo works)
+        window._recoverySnapshot = {
+            notes:     await targetDB.notes.toArray(),
+            tasks:     await targetDB.tasks.toArray(),
+            events:    await targetDB.events.toArray(),
+            bookmarks: await targetDB.bookmarks.toArray()
+        };
+        window._recoveryAddedIds = { notes: [], tasks: [], events: [], bookmarks: [] };
+
+        let totalMigrated = 0;
         const oldDBNames = ['UniversalOrganizer', 'universalorganizer', 'Bilon', 'bilon', 'organizer'];
+
+        async function ingestItems(notes, tasks, events, bookmarks) {
+            const strip = arr => arr.map(x => { const c = {...x}; delete c.id; return c; });
+            if (notes.length) {
+                const ids = await targetDB.notes.bulkAdd(strip(notes), {allKeys: true}).catch(() => []);
+                window._recoveryAddedIds.notes.push(...(ids || []));
+            }
+            if (tasks.length) {
+                const ids = await targetDB.tasks.bulkAdd(strip(tasks), {allKeys: true}).catch(() => []);
+                window._recoveryAddedIds.tasks.push(...(ids || []));
+            }
+            if (events.length) {
+                const ids = await targetDB.events.bulkAdd(strip(events), {allKeys: true}).catch(() => []);
+                window._recoveryAddedIds.events.push(...(ids || []));
+            }
+            if (bookmarks.length) {
+                const ids = await targetDB.bookmarks.bulkAdd(strip(bookmarks), {allKeys: true}).catch(() => []);
+                window._recoveryAddedIds.bookmarks.push(...(ids || []));
+            }
+            return notes.length + tasks.length + events.length + bookmarks.length;
+        }
 
         for (const dbName of oldDBNames) {
             try {
                 const oldDB = new Dexie(dbName);
-                oldDB.version(1).stores({
-                    notes:     '++id, title, createdAt, updatedAt',
-                    tasks:     '++id, title, status, priority, dueDate, createdAt',
-                    events:    '++id, title, start, end, createdAt',
-                    bookmarks: '++id, title, url, createdAt',
-                    settings:  'id',
-                    notifiedItems: 'id'
-                });
-                oldDB.version(2).stores({
-                    notes:     '++id, title, createdAt, updatedAt',
-                    tasks:     '++id, title, status, priority, dueDate, createdAt',
-                    events:    '++id, title, start, end, createdAt',
-                    bookmarks: '++id, title, url, createdAt, position',
-                    settings:  'id',
-                    notifiedItems: 'id'
-                }).upgrade(() => {});
+                oldDB.version(1).stores({ notes:'++id,title,createdAt,updatedAt', tasks:'++id,title,status,priority,dueDate,createdAt', events:'++id,title,start,end,createdAt', bookmarks:'++id,title,url,createdAt', settings:'id', notifiedItems:'id' });
+                oldDB.version(2).stores({ notes:'++id,title,createdAt,updatedAt', tasks:'++id,title,status,priority,dueDate,createdAt', events:'++id,title,start,end,createdAt', bookmarks:'++id,title,url,createdAt,position', settings:'id', notifiedItems:'id' }).upgrade(() => {});
                 await oldDB.open();
-
-                const [notes, tasks, events, bookmarks] = await Promise.all([
-                    oldDB.notes.toArray().catch(() => []),
-                    oldDB.tasks.toArray().catch(() => []),
-                    oldDB.events.toArray().catch(() => []),
-                    oldDB.bookmarks.toArray().catch(() => [])
+                const [n,t,ev,bm] = await Promise.all([
+                    oldDB.notes.toArray().catch(()=>[]),
+                    oldDB.tasks.toArray().catch(()=>[]),
+                    oldDB.events.toArray().catch(()=>[]),
+                    oldDB.bookmarks.toArray().catch(()=>[])
                 ]);
                 oldDB.close();
-
-                const count = notes.length + tasks.length + events.length + bookmarks.length;
-                if (count === 0) continue;
-
-                const strip = arr => arr.map(x => { const c = {...x}; delete c.id; return c; });
-
-                if (notes.length)     await targetDB.notes.bulkAdd(strip(notes)).catch(() => {});
-                if (tasks.length)     await targetDB.tasks.bulkAdd(strip(tasks)).catch(() => {});
-                if (events.length)    await targetDB.events.bulkAdd(strip(events)).catch(() => {});
-                if (bookmarks.length) await targetDB.bookmarks.bulkAdd(strip(bookmarks)).catch(() => {});
-
+                const count = await ingestItems(n, t, ev, bm);
                 totalMigrated += count;
-                console.log(`Recovered ${count} items from "${dbName}"`);
-            } catch(e) {
-                console.log(`DB "${dbName}" not found or error:`, e.message);
-            }
+                if (count) console.log(`Recovered ${count} items from "${dbName}"`);
+            } catch(e) { console.log(`DB "${dbName}" not found:`, e.message); }
         }
 
-        // Also scan indexedDB for any database with note-like tables
+        // Scan all other IndexedDBs
         try {
             const allDBs = await indexedDB.databases();
             for (const info of allDBs) {
-                if (!info.name) continue;
-                // Skip our own slot DBs
-                if (info.name.startsWith('Bilon_')) continue;
-                if (oldDBNames.includes(info.name)) continue; // already tried
-
+                if (!info.name || info.name.startsWith('Bilon_') || oldDBNames.includes(info.name)) continue;
                 try {
                     const oldDB = new Dexie(info.name);
-                    // Try to open with flexible schema
-                    oldDB.version(info.version || 1).stores({
-                        notes:     '++id',
-                        tasks:     '++id',
-                        events:    '++id',
-                        bookmarks: '++id',
-                    });
+                    oldDB.version(info.version || 1).stores({ notes:'++id', tasks:'++id', events:'++id', bookmarks:'++id' });
                     await oldDB.open();
                     const tables = oldDB.tables.map(t => t.name);
                     if (!tables.includes('notes') && !tables.includes('tasks')) { oldDB.close(); continue; }
-
-                    const [notes, tasks, events, bookmarks] = await Promise.all([
-                        tables.includes('notes')     ? oldDB.notes.toArray().catch(() => [])     : [],
-                        tables.includes('tasks')     ? oldDB.tasks.toArray().catch(() => [])     : [],
-                        tables.includes('events')    ? oldDB.events.toArray().catch(() => [])    : [],
-                        tables.includes('bookmarks') ? oldDB.bookmarks.toArray().catch(() => []) : [],
+                    const [n,t,ev,bm] = await Promise.all([
+                        tables.includes('notes')     ? oldDB.notes.toArray().catch(()=>[])     : [],
+                        tables.includes('tasks')     ? oldDB.tasks.toArray().catch(()=>[])     : [],
+                        tables.includes('events')    ? oldDB.events.toArray().catch(()=>[])    : [],
+                        tables.includes('bookmarks') ? oldDB.bookmarks.toArray().catch(()=>[]) : [],
                     ]);
                     oldDB.close();
-
-                    const count = notes.length + tasks.length + events.length + bookmarks.length;
-                    if (count === 0) continue;
-
-                    const strip = arr => arr.map(x => { const c = {...x}; delete c.id; return c; });
-                    if (notes.length)     await targetDB.notes.bulkAdd(strip(notes)).catch(() => {});
-                    if (tasks.length)     await targetDB.tasks.bulkAdd(strip(tasks)).catch(() => {});
-                    if (events.length)    await targetDB.events.bulkAdd(strip(events)).catch(() => {});
-                    if (bookmarks.length) await targetDB.bookmarks.bulkAdd(strip(bookmarks)).catch(() => {});
-
+                    const count = await ingestItems(n, t, ev, bm);
                     totalMigrated += count;
-                    console.log(`Recovered ${count} items from unexpected DB "${info.name}"`);
-                } catch(e2) {
-                    console.log(`Could not open "${info.name}":`, e2.message);
-                }
+                    if (count) console.log(`Recovered ${count} items from "${info.name}"`);
+                } catch(e2) { console.log(`Could not open "${info.name}":`, e2.message); }
             }
-        } catch(e) {
-            console.log('indexedDB.databases() not supported:', e.message);
-        }
+        } catch(e) { console.log('indexedDB.databases() not supported'); }
 
         localStorage.setItem('bilon_migration_done', '1');
         await window.renderView();
 
         if (totalMigrated > 0) {
-            showNotif('success', `Recovered ${totalMigrated} items!`, 'Your old data is now in this slot.');
+            showNotifWithUndo(`✅ Recovered ${totalMigrated} items into this slot.`);
         } else {
-            showNotif('warning', 'Nothing Found', 'No old data was found in this browser. If you used a different browser or device, use Import instead.');
+            showNotif('warning', 'Nothing Found', 'No old data found. Try Import if you have a JSON backup.');
         }
+    };
+
+    window.undoRecover = async function() {
+        if (!window._recoveryAddedIds) {
+            showNotif('warning', 'Nothing to Undo', 'No recovery to undo.');
+            return;
+        }
+        const ids = window._recoveryAddedIds;
+        try {
+            if (ids.notes.length)     await window.db.notes.bulkDelete(ids.notes);
+            if (ids.tasks.length)     await window.db.tasks.bulkDelete(ids.tasks);
+            if (ids.events.length)    await window.db.events.bulkDelete(ids.events);
+            if (ids.bookmarks.length) await window.db.bookmarks.bulkDelete(ids.bookmarks);
+        } catch(e) { console.error('Undo error:', e); }
+
+        window._recoveryAddedIds = null;
+        window._recoverySnapshot = null;
+        await window.renderView();
+        showNotif('success', 'Undone', 'Recovery has been reversed. Your slot is back to how it was.');
+        // remove any lingering undo notif
+        document.querySelectorAll('.notif-undo-bar').forEach(el => el.remove());
+    };
+
+    function showNotifWithUndo(message) {
+        // Remove any old undo bar
+        document.querySelectorAll('.notif-undo-bar').forEach(el => el.remove());
+        const container = document.getElementById('notificationContainer');
+        const notif = document.createElement('div');
+        notif.className = 'notification success notif-undo-bar';
+        notif.style.cssText = 'border-left:4px solid var(--success);';
+        notif.innerHTML = `
+            <span style="font-size:1.3rem;">✅</span>
+            <div style="flex:1;">
+                <div style="font-weight:600;font-size:0.9rem;">${message}</div>
+                <div style="font-size:0.82rem;color:var(--text-secondary);margin-top:4px;">This was added to your current slot.</div>
+            </div>
+            <button class="btn btn-small btn-warning" style="margin-right:6px;white-space:nowrap;" onclick="window.undoRecover()">↩ Undo</button>
+            <button class="notification-close" onclick="this.parentElement.remove()">×</button>
+        `;
+        container.appendChild(notif);
+        // Don't auto-dismiss — keep visible until user acts or closes manually
     };
 
     async function migrateOldData() {
