@@ -858,10 +858,15 @@
         } catch(e) { console.log('indexedDB.databases() not supported'); }
 
         localStorage.setItem('bilon_migration_done', '1');
+
+        // Dedup before showing results so the count is accurate
+        const dupsRemoved = await window.dedupCurrentSlot(true);
+        const net = totalMigrated - dupsRemoved;
         await window.renderView();
 
         if (totalMigrated > 0) {
-            showNotifWithUndo(`✅ Recovered ${totalMigrated} items into this slot.`);
+            const dupNote = dupsRemoved > 0 ? ` (${dupsRemoved} exact duplicate${dupsRemoved > 1 ? 's' : ''} skipped)` : '';
+            showNotifWithUndo(`✅ Recovered ${net} item${net !== 1 ? 's' : ''}${dupNote} into this slot.`);
         } else {
             showNotif('warning', 'Nothing Found', 'No old data found. Try Import if you have a JSON backup.');
         }
@@ -994,6 +999,7 @@
         await migrateOldData();
 
         await switchToSlot(getCurrentSlotId(), false);
+        await window.dedupCurrentSlot(true);
         renderSlotBar();
         await window.renderView();
         updateESTClock();
@@ -1019,7 +1025,10 @@
 
         renderSlotBar();
         updateCurrentSlotLabel();
-        if (reRender) await window.renderView();
+        if (reRender) {
+            await window.dedupCurrentSlot(true);
+            await window.renderView();
+        }
     }
 
     function renderSlotBar() {
@@ -1696,6 +1705,66 @@
 
     window.closeModal = function() { document.getElementById('itemModal').classList.remove('active'); };
 
+    // ═══════════════════════════════════════════════════════════
+    //  DEDUPLICATION
+    //  Fingerprints every field that matters per type.
+    //  Keeps the earliest createdAt copy, deletes all later exact matches.
+    // ═══════════════════════════════════════════════════════════
+
+    function fingerprintItem(type, item) {
+        const norm = v => (v === undefined || v === null) ? '' : String(v).trim();
+        switch (type) {
+            case 'notes':
+                return [norm(item.title), norm(item.content),
+                        norm(item.progressCurrent), norm(item.progressTotal)].join('|∥|');
+            case 'tasks':
+                return [norm(item.title), norm(item.dueDate), norm(item.priority),
+                        norm(item.progressCurrent), norm(item.progressTotal)].join('|∥|');
+            case 'events':
+                return [norm(item.title), norm(item.description),
+                        norm(item.start), norm(item.end)].join('|∥|');
+            case 'bookmarks':
+                return [norm(item.title), norm(item.url)].join('|∥|');
+            default:
+                return norm(item.title);
+        }
+    }
+
+    async function dedupTable(db, type) {
+        const items = await db[type].toArray();
+        const seen = new Map(); // fingerprint → earliest item
+        const toDelete = [];
+
+        // Sort oldest-first so we always keep the original
+        items.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
+
+        for (const item of items) {
+            const fp = fingerprintItem(type, item);
+            if (seen.has(fp)) {
+                toDelete.push(item.id);
+            } else {
+                seen.set(fp, item.id);
+            }
+        }
+
+        if (toDelete.length > 0) {
+            await db[type].bulkDelete(toDelete);
+        }
+        return toDelete.length;
+    }
+
+    window.dedupCurrentSlot = async function(silent = false) {
+        const tables = ['notes', 'tasks', 'events', 'bookmarks'];
+        let total = 0;
+        for (const t of tables) {
+            total += await dedupTable(window.db, t);
+        }
+        if (!silent && total > 0) {
+            showNotif('success', `Removed ${total} duplicate${total > 1 ? 's' : ''}`, 'Exact matches were automatically cleaned up.');
+        }
+        return total;
+    };
+
     window.toggleTask = async function(id) {
         const task = await window.db.tasks.get(id);
         await window.db.tasks.update(id, { status: task.status === 'completed' ? 'pending' : 'completed' });
@@ -1823,8 +1892,10 @@
                 if (data.tasks)     await window.db.tasks.bulkAdd(data.tasks.map(x => { delete x.id; return x; }));
                 if (data.events)    await window.db.events.bulkAdd(data.events.map(x => { delete x.id; return x; }));
                 if (data.bookmarks) await window.db.bookmarks.bulkAdd(data.bookmarks.map(x => { delete x.id; return x; }));
+                const dupsOnImport = await window.dedupCurrentSlot(true);
                 await window.renderView();
-                showNotif('success', 'Import Done', 'Data imported into current slot.');
+                const dupMsg = dupsOnImport > 0 ? ` ${dupsOnImport} exact duplicate${dupsOnImport > 1 ? 's' : ''} removed.` : '';
+                showNotif('success', 'Import Done', `Data imported into current slot.${dupMsg}`);
             }
         };
         input.click();
