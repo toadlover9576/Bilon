@@ -744,6 +744,67 @@
     //  INIT
     // ═══════════════════════════════════════════════════════════
 
+    async function migrateOldData() {
+        const MIGRATED_KEY = 'bilon_migration_done';
+        if (localStorage.getItem(MIGRATED_KEY)) return;
+
+        try {
+            // Check if the old DB exists and has data
+            const oldDB = new Dexie('UniversalOrganizer');
+            oldDB.version(1).stores({
+                notes:     '++id, title, createdAt, updatedAt',
+                tasks:     '++id, title, status, priority, dueDate, createdAt',
+                events:    '++id, title, start, end, createdAt',
+                bookmarks: '++id, title, url, createdAt',
+                settings:  'id',
+                notifiedItems: 'id'
+            });
+            oldDB.version(2).stores({
+                notes:     '++id, title, createdAt, updatedAt',
+                tasks:     '++id, title, status, priority, dueDate, createdAt',
+                events:    '++id, title, start, end, createdAt',
+                bookmarks: '++id, title, url, createdAt, position',
+                settings:  'id',
+                notifiedItems: 'id'
+            });
+
+            await oldDB.open();
+
+            const [notes, tasks, events, bookmarks, settings] = await Promise.all([
+                oldDB.notes.toArray(),
+                oldDB.tasks.toArray(),
+                oldDB.events.toArray(),
+                oldDB.bookmarks.toArray(),
+                oldDB.settings.toArray()
+            ]);
+
+            const hasData = notes.length + tasks.length + events.length + bookmarks.length > 0;
+            oldDB.close();
+
+            if (!hasData) {
+                localStorage.setItem(MIGRATED_KEY, '1');
+                return;
+            }
+
+            // Open the default slot DB and migrate
+            const newDB = await openSlotDB('default');
+
+            if (notes.length)     await newDB.notes.bulkAdd(notes.map(x => { const c={...x}; delete c.id; return c; }));
+            if (tasks.length)     await newDB.tasks.bulkAdd(tasks.map(x => { const c={...x}; delete c.id; return c; }));
+            if (events.length)    await newDB.events.bulkAdd(events.map(x => { const c={...x}; delete c.id; return c; }));
+            if (bookmarks.length) await newDB.bookmarks.bulkAdd(bookmarks.map(x => { const c={...x}; delete c.id; return c; }));
+            if (settings.length)  await newDB.settings.bulkPut(settings);
+            newDB.close();
+
+            localStorage.setItem(MIGRATED_KEY, '1');
+            console.log(`Migrated ${notes.length} notes, ${tasks.length} tasks, ${events.length} events, ${bookmarks.length} bookmarks from old DB.`);
+        } catch(e) {
+            // Old DB may not exist — that's fine
+            localStorage.setItem(MIGRATED_KEY, '1');
+            console.log('No old DB to migrate or migration error:', e.message);
+        }
+    }
+
     async function initApp() {
         // Ensure default slot exists
         let slots = loadSlotsMeta();
@@ -764,6 +825,9 @@
         if (!exists) {
             setCurrentSlotId(slots[0].id);
         }
+
+        // Migrate old UniversalOrganizer data into default slot (runs once)
+        await migrateOldData();
 
         await switchToSlot(getCurrentSlotId(), false);
         renderSlotBar();
