@@ -421,7 +421,6 @@
                 <button class="btn btn-secondary btn-small" onclick="window.exportData()">💾 Export</button>
                 <button class="btn btn-secondary btn-small" onclick="window.importData()">📥 Import</button>
                 <button class="btn btn-small" style="background:linear-gradient(135deg,#f5a623,#e8960f);color:white;" onclick="window.openSlotManager()">🗄️ Slots</button>
-                <button class="btn btn-small" style="background:#e67e22;color:white;" onclick="window.forceRecover()" title="Recover data from original Bilon database">🔄 Recover Old Data</button>
                 <button class="btn btn-small" onclick="window.openSettings()">⚙️</button>
             </div>
         </div>
@@ -745,120 +744,7 @@
     //  INIT
     // ═══════════════════════════════════════════════════════════
 
-    window.forceRecover = async function() {
-        const targetSlotId = getCurrentSlotId();
-        const targetDB = window.db;
-        let totalMigrated = 0;
-
-        // Try every possible old DB name
-        const oldDBNames = ['UniversalOrganizer', 'universalorganizer', 'Bilon', 'bilon', 'organizer'];
-
-        for (const dbName of oldDBNames) {
-            try {
-                const oldDB = new Dexie(dbName);
-                oldDB.version(1).stores({
-                    notes:     '++id, title, createdAt, updatedAt',
-                    tasks:     '++id, title, status, priority, dueDate, createdAt',
-                    events:    '++id, title, start, end, createdAt',
-                    bookmarks: '++id, title, url, createdAt',
-                    settings:  'id',
-                    notifiedItems: 'id'
-                });
-                oldDB.version(2).stores({
-                    notes:     '++id, title, createdAt, updatedAt',
-                    tasks:     '++id, title, status, priority, dueDate, createdAt',
-                    events:    '++id, title, start, end, createdAt',
-                    bookmarks: '++id, title, url, createdAt, position',
-                    settings:  'id',
-                    notifiedItems: 'id'
-                }).upgrade(() => {});
-                await oldDB.open();
-
-                const [notes, tasks, events, bookmarks] = await Promise.all([
-                    oldDB.notes.toArray().catch(() => []),
-                    oldDB.tasks.toArray().catch(() => []),
-                    oldDB.events.toArray().catch(() => []),
-                    oldDB.bookmarks.toArray().catch(() => [])
-                ]);
-                oldDB.close();
-
-                const count = notes.length + tasks.length + events.length + bookmarks.length;
-                if (count === 0) continue;
-
-                const strip = arr => arr.map(x => { const c = {...x}; delete c.id; return c; });
-
-                if (notes.length)     await targetDB.notes.bulkAdd(strip(notes)).catch(() => {});
-                if (tasks.length)     await targetDB.tasks.bulkAdd(strip(tasks)).catch(() => {});
-                if (events.length)    await targetDB.events.bulkAdd(strip(events)).catch(() => {});
-                if (bookmarks.length) await targetDB.bookmarks.bulkAdd(strip(bookmarks)).catch(() => {});
-
-                totalMigrated += count;
-                console.log(`Recovered ${count} items from "${dbName}"`);
-            } catch(e) {
-                console.log(`DB "${dbName}" not found or error:`, e.message);
-            }
-        }
-
-        // Also scan indexedDB for any database with note-like tables
-        try {
-            const allDBs = await indexedDB.databases();
-            for (const info of allDBs) {
-                if (!info.name) continue;
-                // Skip our own slot DBs
-                if (info.name.startsWith('Bilon_')) continue;
-                if (oldDBNames.includes(info.name)) continue; // already tried
-
-                try {
-                    const oldDB = new Dexie(info.name);
-                    // Try to open with flexible schema
-                    oldDB.version(info.version || 1).stores({
-                        notes:     '++id',
-                        tasks:     '++id',
-                        events:    '++id',
-                        bookmarks: '++id',
-                    });
-                    await oldDB.open();
-                    const tables = oldDB.tables.map(t => t.name);
-                    if (!tables.includes('notes') && !tables.includes('tasks')) { oldDB.close(); continue; }
-
-                    const [notes, tasks, events, bookmarks] = await Promise.all([
-                        tables.includes('notes')     ? oldDB.notes.toArray().catch(() => [])     : [],
-                        tables.includes('tasks')     ? oldDB.tasks.toArray().catch(() => [])     : [],
-                        tables.includes('events')    ? oldDB.events.toArray().catch(() => [])    : [],
-                        tables.includes('bookmarks') ? oldDB.bookmarks.toArray().catch(() => []) : [],
-                    ]);
-                    oldDB.close();
-
-                    const count = notes.length + tasks.length + events.length + bookmarks.length;
-                    if (count === 0) continue;
-
-                    const strip = arr => arr.map(x => { const c = {...x}; delete c.id; return c; });
-                    if (notes.length)     await targetDB.notes.bulkAdd(strip(notes)).catch(() => {});
-                    if (tasks.length)     await targetDB.tasks.bulkAdd(strip(tasks)).catch(() => {});
-                    if (events.length)    await targetDB.events.bulkAdd(strip(events)).catch(() => {});
-                    if (bookmarks.length) await targetDB.bookmarks.bulkAdd(strip(bookmarks)).catch(() => {});
-
-                    totalMigrated += count;
-                    console.log(`Recovered ${count} items from unexpected DB "${info.name}"`);
-                } catch(e2) {
-                    console.log(`Could not open "${info.name}":`, e2.message);
-                }
-            }
-        } catch(e) {
-            console.log('indexedDB.databases() not supported:', e.message);
-        }
-
-        localStorage.setItem('bilon_migration_done', '1');
-        await window.renderView();
-
-        if (totalMigrated > 0) {
-            showNotif('success', `Recovered ${totalMigrated} items!`, 'Your old data is now in this slot.');
-        } else {
-            showNotif('warning', 'Nothing Found', 'No old data was found in this browser. If you used a different browser or device, use Import instead.');
-        }
-    };
-
-    
+    async function migrateOldData() {
         const MIGRATED_KEY = 'bilon_migration_done';
         if (localStorage.getItem(MIGRATED_KEY)) return;
 
