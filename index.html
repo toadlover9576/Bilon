@@ -5,30 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bilon: Universal Organizer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dexie/3.2.4/dexie.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/6.6.2/fuse.min.js"></script>
-    <link rel="apple-touch-icon" sizes="57x57" href="Favicon/apple-icon-57x57.png">
-<link rel="apple-touch-icon" sizes="60x60" href="Favicon/apple-icon-60x60.png">
-<link rel="apple-touch-icon" sizes="72x72" href="Favicon/apple-icon-72x72.png">
-<link rel="apple-touch-icon" sizes="76x76" href="Favicon/apple-icon-76x76.png">
-<link rel="apple-touch-icon" sizes="114x114" href="Favicon/apple-icon-114x114.png">
-<link rel="apple-touch-icon" sizes="120x120" href="Favicon/apple-icon-120x120.png">
-<link rel="apple-touch-icon" sizes="144x144" href="Favicon/apple-icon-144x144.png">
-<link rel="apple-touch-icon" sizes="152x152" href="Favicon/apple-icon-152x152.png">
-<link rel="apple-touch-icon" sizes="180x180" href="Favicon/apple-icon-180x180.png">
-<link rel="icon" type="image/png" sizes="192x192"  href="Favicon/android-icon-192x192.png">
-<link rel="icon" type="image/png" sizes="32x32" href="Favicon/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="96x96" href="Favicon/favicon-96x96.png">
-<link rel="icon" type="image/png" sizes="16x16" href="Favicon/favicon-16x16.png">
-<link rel="manifest" href="Favicon/manifest.json">
-<meta name="msapplication-TileColor" content="#ffffff">
-<meta name="msapplication-TileImage" content="Favicons/ms-icon-144x144.png">
-<meta name="theme-color" content="#ffffff">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
             --bg-primary: #ffffff;
@@ -42,6 +20,8 @@
             --success: #4caf50;
             --warning: #ff9800;
             --danger: #f44336;
+            --slot-gold: #f5a623;
+            --slot-active: #27ae60;
         }
 
         body.dark-mode {
@@ -66,6 +46,8 @@
             height: 100vh;
         }
 
+        /* Slot bar is now embedded in the top-nav, not a separate row */
+
         .top-nav {
             grid-column: 1 / -1;
             background: var(--bg-secondary);
@@ -83,21 +65,18 @@
             background: var(--accent);
             color: white;
             cursor: pointer;
+            font-size: 0.9rem;
         }
-
-        .btn:hover {
-            background: var(--accent-hover);
-        }
-
-        .btn-secondary {
-            background: var(--bg-tertiary);
-            color: var(--text-primary);
-        }
-
-        .btn-small {
-            padding: 6px 12px;
-            font-size: 0.85rem;
-        }
+        .btn:hover { background: var(--accent-hover); }
+        .btn-secondary { background: var(--bg-tertiary); color: var(--text-primary); }
+        .btn-secondary:hover { background: var(--border); }
+        .btn-small { padding: 6px 12px; font-size: 0.82rem; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-danger:hover { background: #c0392b; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { background: #219a52; }
+        .btn-warning { background: var(--warning); color: white; }
+        .btn-warning:hover { background: #e08a00; }
 
         .sidebar {
             background: var(--bg-secondary);
@@ -111,21 +90,12 @@
             border-radius: 6px;
             cursor: pointer;
             margin-bottom: 5px;
+            font-size: 0.95rem;
         }
+        .sidebar-item:hover { background: var(--bg-tertiary); }
+        .sidebar-item.active { background: var(--accent); color: white; }
 
-        .sidebar-item:hover {
-            background: var(--bg-tertiary);
-        }
-
-        .sidebar-item.active {
-            background: var(--accent);
-            color: white;
-        }
-
-        .main-content {
-            padding: 30px;
-            overflow-y: auto;
-        }
+        .main-content { padding: 30px; overflow-y: auto; }
 
         .search-bar {
             width: 100%;
@@ -150,33 +120,14 @@
             border-radius: 12px;
             padding: 20px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.25s ease;
         }
-
-        .card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
-        }
-
-        .card.dragging {
-            opacity: 0.5;
-            transform: scale(0.95);
-        }
-
-        .card.drag-over {
-            transform: translateY(-8px) scale(1.05);
-            box-shadow: 0 12px 24px rgba(102, 126, 234, 0.3);
-            border: 2px solid var(--accent);
-        }
-
-        .card h3 {
-            margin-bottom: 10px;
-            font-size: 1.2rem;
-        }
+        .card:hover { transform: translateY(-3px); box-shadow: 0 6px 14px rgba(0,0,0,0.12); }
+        .card h3 { margin-bottom: 8px; font-size: 1.1rem; }
 
         .card-content {
             color: var(--text-secondary);
-            margin: 10px 0;
+            margin: 8px 0;
             overflow: hidden;
             text-overflow: ellipsis;
             display: -webkit-box;
@@ -187,43 +138,36 @@
         .task-item {
             background: var(--bg-secondary);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 10px;
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 8px;
             display: flex;
-            gap: 15px;
-            transition: all 0.3s ease;
+            gap: 12px;
+            align-items: flex-start;
         }
-
-        .task-item:hover {
-            transform: translateX(4px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-
         .priority-high { border-left: 4px solid var(--danger); }
         .priority-medium { border-left: 4px solid var(--warning); }
         .priority-low { border-left: 4px solid var(--success); }
 
+        .progress-wrapper { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+        .progress-label { font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 5px; display: flex; justify-content: space-between; }
+        .progress-bar-container { background: var(--bg-tertiary); border-radius: 10px; overflow: hidden; height: 7px; }
+        .progress-bar-fill { height: 100%; background: linear-gradient(90deg, #6c9aff, #4a7fff); transition: width 0.5s ease; border-radius: 10px; }
+
+        /* ═══ MODAL BASE ═══ */
         .modal {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
+            inset: 0;
+            background: rgba(0,0,0,0.55);
             z-index: 1000;
             align-items: center;
             justify-content: center;
         }
-
-        .modal.active {
-            display: flex;
-        }
-
+        .modal.active { display: flex; }
         .modal-content {
             background: var(--bg-primary);
-            border-radius: 12px;
+            border-radius: 14px;
             padding: 30px;
             max-width: 700px;
             width: 90%;
@@ -231,620 +175,495 @@
             overflow-y: auto;
         }
 
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
-
-        .form-group input,
-        .form-group textarea,
-        .form-group select {
+        .form-group { margin-bottom: 18px; }
+        .form-group label { display: block; margin-bottom: 7px; font-weight: 500; }
+        .form-group input, .form-group textarea, .form-group select {
             width: 100%;
             padding: 10px;
             border: 1px solid var(--border);
             border-radius: 6px;
             background: var(--bg-secondary);
             color: var(--text-primary);
-            font-size: 1rem;
+            font-size: 0.97rem;
         }
-
-        .form-group textarea {
-            min-height: 150px;
-        }
-
+        .form-group textarea { min-height: 130px; }
         [contenteditable] {
             border: 1px solid var(--border);
-            padding: 15px;
+            padding: 12px;
             border-radius: 6px;
-            min-height: 200px;
+            min-height: 160px;
             background: var(--bg-secondary);
         }
 
-        .strikethrough-btn {
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border);
-            padding: 8px 12px;
-            border-radius: 6px;
+        /* ═══ SLOT SYSTEM ═══ */
+        .slot-bar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .slot-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            border: 1.5px solid var(--border);
+            background: var(--bg-primary);
             cursor: pointer;
-            margin-bottom: 10px;
-            font-size: 0.9rem;
-            color: var(--text-primary);
+            font-size: 0.78rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            white-space: nowrap;
         }
-
-        .strikethrough-btn:hover {
-            background: var(--accent);
+        .slot-chip:hover { border-color: var(--accent); color: var(--accent); }
+        .slot-chip.slot-active {
+            background: var(--slot-active);
+            border-color: var(--slot-active);
             color: white;
         }
-
-        .strikethrough-btn.active {
-            background: var(--accent);
-            color: white;
+        .slot-chip .slot-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+            opacity: 0.7;
         }
-
-        .tag {
-            background: var(--accent);
-            color: white;
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            display: inline-block;
-            margin-right: 5px;
-        }
-
-        .progress-wrapper {
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px solid var(--border);
-        }
-
-        .progress-label {
-            font-size: 0.85rem;
+        .slot-add-btn {
+            padding: 3px 9px;
+            border-radius: 20px;
+            border: 1.5px dashed var(--border);
+            background: transparent;
             color: var(--text-secondary);
-            margin-bottom: 6px;
+            cursor: pointer;
+            font-size: 0.82rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            line-height: 1.4;
+        }
+        .slot-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .slot-label { font-size: 0.72rem; color: var(--text-secondary); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; }
+
+        /* ═══ SLOT MANAGER MODAL ═══ */
+        #slotManagerModal .modal-content { max-width: 860px; }
+
+        .slot-manager-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 14px;
+            margin-top: 16px;
+        }
+
+        .slot-card {
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            background: var(--bg-secondary);
+            position: relative;
+            transition: border-color 0.2s;
+        }
+        .slot-card.is-current { border-color: var(--slot-active); }
+        .slot-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+        .slot-card-name { font-weight: 700; font-size: 1rem; }
+        .slot-card-key {
+            font-family: monospace;
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            background: var(--bg-tertiary);
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-top: 3px;
+            word-break: break-all;
+        }
+        .slot-card-meta { font-size: 0.8rem; color: var(--text-secondary); margin: 6px 0; }
+        .slot-card-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+        .slot-current-badge {
+            position: absolute;
+            top: -1px; right: 10px;
+            background: var(--slot-active);
+            color: white;
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 0 0 6px 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* ═══ TRANSFER MODAL ═══ */
+        #transferModal .modal-content { max-width: 750px; }
+        .transfer-category-section { margin-bottom: 20px; }
+        .transfer-category-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-        }
-
-        .progress-bar-container {
+            padding: 10px 14px;
             background: var(--bg-tertiary);
-            border-radius: 10px;
-            overflow: hidden;
-            height: 8px;
-            box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
         }
-
-        .progress-bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #6c9aff, #4a7fff);
-            transition: width 0.6s ease;
-            border-radius: 10px;
-        }
-
-        .progress-percent {
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        .notification-container {
-            position: fixed;
-            top: 70px;
-            right: 20px;
-            z-index: 3000;
+        .transfer-category-header h4 { font-size: 0.95rem; }
+        .transfer-item-row {
             display: flex;
-            flex-direction: column;
+            align-items: center;
             gap: 10px;
-            max-width: 400px;
+            padding: 8px 14px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            margin-bottom: 4px;
+            background: var(--bg-primary);
         }
+        .transfer-item-row label { flex: 1; cursor: pointer; font-size: 0.9rem; }
+        .transfer-target-select { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-secondary); color: var(--text-primary); font-size: 0.85rem; }
 
+        /* ═══ VERIFICATION MODAL ═══ */
+        #verifyModal .modal-content { max-width: 480px; }
+        .verify-step {
+            display: none;
+            animation: fadeIn 0.2s ease;
+        }
+        .verify-step.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+        .verify-key-display {
+            font-family: monospace;
+            font-size: 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px;
+            letter-spacing: 0.12em;
+            text-align: center;
+            color: var(--danger);
+            font-weight: 700;
+            margin: 12px 0;
+            user-select: all;
+        }
+        .verify-warning {
+            background: rgba(244,67,54,0.08);
+            border: 1px solid rgba(244,67,54,0.3);
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 0.88rem;
+            color: var(--danger);
+            margin: 10px 0;
+        }
+        .verify-steps-indicator {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 18px;
+        }
+        .verify-step-dot {
+            width: 28px; height: 4px;
+            border-radius: 2px;
+            background: var(--border);
+            transition: background 0.3s;
+        }
+        .verify-step-dot.done { background: var(--danger); }
+
+        /* ═══ NOTIFICATION ═══ */
+        .notification-container { position: fixed; top: 70px; right: 20px; z-index: 3000; display: flex; flex-direction: column; gap: 8px; max-width: 380px; }
         .notification {
             background: var(--bg-primary);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 15px 20px;
+            border-radius: 10px;
+            padding: 13px 16px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             display: flex;
             align-items: flex-start;
-            gap: 12px;
+            gap: 10px;
             animation: slideIn 0.3s ease;
         }
+        @keyframes slideIn { from { transform: translateX(360px); opacity: 0; } to { transform: none; opacity: 1; } }
+        .notification.warning { border-left: 4px solid var(--warning); }
+        .notification.danger { border-left: 4px solid var(--danger); }
+        .notification.info { border-left: 4px solid var(--accent); }
+        .notification.success { border-left: 4px solid var(--success); }
+        .notification-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-secondary); }
 
-        @keyframes slideIn {
-            from {
-                transform: translateX(400px);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        .notification.warning {
-            border-left: 4px solid var(--warning);
-        }
-
-        .notification.danger {
-            border-left: 4px solid var(--danger);
-        }
-
-        .notification.info {
-            border-left: 4px solid var(--accent);
-        }
-
-        .notification-icon {
-            font-size: 1.5rem;
-            flex-shrink: 0;
-        }
-
-        .notification-content {
-            flex: 1;
-        }
-
-        .notification-title {
-            font-weight: 600;
-            margin-bottom: 5px;
-            color: var(--text-primary);
-        }
-
-        .notification-message {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-        }
-
-        .notification-close {
-            background: none;
-            border: none;
-            font-size: 1.2rem;
-            cursor: pointer;
-            color: var(--text-secondary);
-            padding: 0;
-            line-height: 1;
-        }
-
-        .notification-close:hover {
-            color: var(--text-primary);
-        }
-
-        .notification-bell {
-            position: relative;
-            cursor: pointer;
-        }
-
-        .notification-bell-icon {
-            font-size: 1.2rem;
-            transition: transform 0.3s ease;
-        }
-
-        .notification-bell:hover .notification-bell-icon {
-            transform: scale(1.1);
-        }
-
-        .notification-bell.has-notifications .notification-bell-icon {
-            animation: ring 2s ease-in-out infinite;
-        }
-
-        @keyframes ring {
-            0%, 100% { transform: rotate(0deg); }
-            10%, 30% { transform: rotate(-15deg); }
-            20%, 40% { transform: rotate(15deg); }
-        }
-
-        .notification-badge {
-            position: absolute;
-            top: -5px;
-            right: -5px;
-            background: var(--danger);
-            color: white;
-            border-radius: 50%;
-            width: 18px;
-            height: 18px;
-            font-size: 0.7rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-        }
-
-        .notification-panel {
-            display: none;
-            position: fixed;
-            top: 70px;
-            right: 20px;
-            width: 400px;
-            max-height: 600px;
-            background: var(--bg-primary);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-            z-index: 3000;
-            overflow: hidden;
-            flex-direction: column;
-        }
-
-        .notification-panel.active {
-            display: flex;
-            animation: slideInPanel 0.3s ease;
-        }
-
-        @keyframes slideInPanel {
-            from {
-                transform: translateX(420px);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        .notification-panel-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            font-weight: 600;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .notification-panel-body {
-            flex: 1;
-            overflow-y: auto;
-            padding: 15px;
-        }
-
-        .notification-log-item {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 12px 15px;
-            margin-bottom: 10px;
-            display: flex;
-            gap: 10px;
-            align-items: flex-start;
-        }
-
-        .notification-log-item.danger {
-            border-left: 4px solid var(--danger);
-        }
-
-        .notification-log-item.warning {
-            border-left: 4px solid var(--warning);
-        }
-
-        .notification-log-item.info {
-            border-left: 4px solid var(--accent);
-        }
-
-        .notification-log-icon {
-            font-size: 1.2rem;
-            flex-shrink: 0;
-        }
-
-        .notification-log-content {
-            flex: 1;
-        }
-
-        .notification-log-title {
-            font-weight: 600;
-            margin-bottom: 4px;
-            color: var(--text-primary);
-            font-size: 0.95rem;
-        }
-
-        .notification-log-message {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            margin-bottom: 4px;
-        }
-
-        .notification-log-time {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            font-style: italic;
-        }
-
-        .notification-log-delete {
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            font-size: 1.2rem;
-            padding: 0;
-            line-height: 1;
-            margin-left: 8px;
-        }
-
-        .notification-log-delete:hover {
-            color: var(--danger);
-        }
-
-        .notification-empty {
-            text-align: center;
-            padding: 40px 20px;
-            color: var(--text-secondary);
-        }
-
-        .notification-empty-icon {
-            font-size: 3rem;
-            margin-bottom: 10px;
-            opacity: 0.5;
-        }
-
-        .clear-notifications-btn {
+        /* Misc */
+        .strikethrough-btn {
             background: var(--bg-tertiary);
-            color: var(--text-primary);
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
+            border: 1px solid var(--border);
+            padding: 6px 10px;
+            border-radius: 5px;
             cursor: pointer;
+            margin-bottom: 8px;
             font-size: 0.85rem;
-        }
-
-        .clear-notifications-btn:hover {
-            background: var(--accent);
-            color: white;
-        }
-
-        .chat-widget {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 2000;
-        }
-
-        .chat-button {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            transition: transform 0.3s ease;
-        }
-
-        .chat-button:hover {
-            transform: scale(1.1);
-        }
-
-        .chat-window {
-            display: none;
-            position: fixed;
-            bottom: 90px;
-            right: 20px;
-            width: 400px;
-            height: 600px;
-            background: var(--bg-primary);
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-            flex-direction: column;
-            overflow: hidden;
-            border: 1px solid var(--border);
-        }
-
-        .chat-window.active {
-            display: flex;
-        }
-
-        .chat-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            font-weight: 600;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .chat-message {
-            max-width: 80%;
-            padding: 12px 16px;
-            border-radius: 12px;
-            word-wrap: break-word;
-        }
-
-        .chat-message.user {
-            background: var(--accent);
-            color: white;
-            align-self: flex-end;
-            margin-left: auto;
-        }
-
-        .chat-message.ai {
-            background: var(--bg-secondary);
             color: var(--text-primary);
-            align-self: flex-start;
-            border: 1px solid var(--border);
         }
+        .tag { background: var(--accent); color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.78rem; display: inline-block; margin-right: 4px; }
 
-        .chat-input-container {
-            padding: 15px;
-            border-top: 1px solid var(--border);
-            display: flex;
-            gap: 10px;
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
         }
-
-        .chat-input {
-            flex: 1;
-            padding: 12px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            font-size: 0.95rem;
-        }
-
-        .chat-send-btn {
-            padding: 12px 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-        }
-
-        .chat-send-btn:hover {
-            opacity: 0.9;
-        }
-
-        .chat-send-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
+        .empty-state-icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.4; }
     </style>
 </head>
 <body>
     <div class="notification-container" id="notificationContainer"></div>
-    
-    <div class="notification-panel" id="notificationPanel">
-        <div class="notification-panel-header">
-            <span>📬 Notifications</span>
-            <div style="display: flex; gap: 10px; align-items: center;">
-                <button class="clear-notifications-btn" onclick="window.clearNotifications()">Clear All</button>
-                <button style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer;" onclick="window.toggleNotificationPanel()">×</button>
-            </div>
-        </div>
-        <div class="notification-panel-body" id="notificationPanelBody">
-            <div class="notification-empty">
-                <div class="notification-empty-icon">🔔</div>
-                <div>No notifications yet</div>
-            </div>
-        </div>
-    </div>
-    
+
     <div class="app-container">
+        <!-- Top Nav -->
         <div class="top-nav">
-            <h1>Bilon: Universal Organizer</h1>
-            <div style="display: flex; gap: 10px; align-items: center;">
-                <div id="estClock" style="font-size: 1rem; font-weight: 500; color: var(--text-primary); margin-right: 10px;"></div>
+            <div style="display:flex;align-items:center;gap:14px;">
+                <h1 style="font-size:1.2rem;">Bilon: Universal Organizer</h1>
+                <div class="slot-bar" id="slotBar">
+                    <span class="slot-label">Slot:</span>
+                    <div id="slotChips" style="display:flex;gap:5px;align-items:center;"></div>
+                    <button class="slot-add-btn" onclick="window.openCreateSlot()">+</button>
+                </div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <div id="estClock" style="font-size:0.95rem;font-weight:500;color:var(--text-secondary);margin-right:6px;"></div>
                 <button class="btn btn-secondary btn-small" onclick="window.toggleTheme()">🌓</button>
                 <button class="btn btn-secondary btn-small" onclick="window.exportData()">💾 Export</button>
                 <button class="btn btn-secondary btn-small" onclick="window.importData()">📥 Import</button>
-                <div class="notification-bell" onclick="window.toggleNotificationPanel()">
-                    <span class="notification-bell-icon">🔔</span>
-                    <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
-                </div>
+                <button class="btn btn-small" style="background:linear-gradient(135deg,#f5a623,#e8960f);color:white;" onclick="window.openSlotManager()">🗄️ Slots</button>
                 <button class="btn btn-small" onclick="window.openSettings()">⚙️</button>
             </div>
         </div>
 
+        <!-- Sidebar -->
         <div class="sidebar">
-            <h3 style="margin-bottom: 10px; font-size: 0.85rem; text-transform: uppercase; color: var(--text-secondary);">Modules</h3>
+            <h3 style="margin-bottom:10px;font-size:0.78rem;text-transform:uppercase;color:var(--text-secondary);">Modules</h3>
             <div class="sidebar-item active" onclick="window.switchView('notes', this)">📝 Notes</div>
             <div class="sidebar-item" onclick="window.switchView('tasks', this)">✓ Tasks</div>
             <div class="sidebar-item" onclick="window.switchView('calendar', this)">📅 Calendar</div>
             <div class="sidebar-item" onclick="window.switchView('bookmarks', this)">🔖 Bookmarks</div>
-            <h3 style="margin: 20px 0 10px 0; font-size: 0.85rem; text-transform: uppercase; color: var(--text-secondary);">Actions</h3>
+            <h3 style="margin:18px 0 10px;font-size:0.78rem;text-transform:uppercase;color:var(--text-secondary);">Actions</h3>
             <div class="sidebar-item" onclick="window.createNew()">➕ Create New</div>
+            <div class="sidebar-item" onclick="window.openTransferModal()">🔀 Transfer Data</div>
         </div>
 
+        <!-- Main Content -->
         <div class="main-content">
             <input type="text" class="search-bar" id="searchBar" placeholder="Search everything...">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 id="viewTitle">Notes</h2>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+                <div>
+                    <h2 id="viewTitle">Notes</h2>
+                    <div id="currentSlotLabel" style="font-size:0.78rem;color:var(--text-secondary);margin-top:2px;"></div>
+                </div>
                 <button class="btn" onclick="window.createNew()">+ New</button>
             </div>
             <div class="grid-container" id="contentGrid"></div>
         </div>
     </div>
 
+    <!-- ═══ ITEM MODAL ═══ -->
     <div class="modal" id="itemModal">
         <div class="modal-content">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:18px;">
                 <h3 id="modalTitle">New Note</h3>
-                <button style="border: none; background: none; font-size: 1.5rem; cursor: pointer; color: var(--text-primary);" onclick="window.closeModal()">&times;</button>
+                <button style="border:none;background:none;font-size:1.5rem;cursor:pointer;color:var(--text-primary);" onclick="window.closeModal()">&times;</button>
             </div>
-            <form id="itemForm" onsubmit="return false;">
-                <div class="form-group">
-                    <label>Title</label>
-                    <button type="button" class="strikethrough-btn" onclick="window.toggleStrikethroughTitle()" title="Select text and click to strikethrough">⌫ Strikethrough</button>
-                    <div id="itemTitle" contenteditable="true" style="border: 1px solid var(--border); padding: 10px; border-radius: 6px; background: var(--bg-secondary); color: var(--text-primary); font-size: 1rem; min-height: 40px;"></div>
+            <div class="form-group">
+                <label>Title</label>
+                <button type="button" class="strikethrough-btn" onclick="window.toggleStrikethroughTitle()">⌫ Strikethrough</button>
+                <div id="itemTitle" contenteditable="true" style="min-height:40px;"></div>
+            </div>
+            <div class="form-group" id="contentGroup">
+                <label>Content</label>
+                <button type="button" class="strikethrough-btn" onclick="window.toggleStrikethrough()">⌫ Strikethrough</button>
+                <div id="itemContent" contenteditable="true"></div>
+            </div>
+            <div class="form-group" id="progressGroup" style="display:none">
+                <label>Progress (optional)</label>
+                <div style="display:flex;gap:10px;align-items:center;">
+                    <input type="number" id="itemProgressCurrent" placeholder="Current" min="0" style="width:140px;">
+                    <span style="color:var(--text-secondary);">out of</span>
+                    <input type="number" id="itemProgressTotal" placeholder="Total" min="1" style="width:140px;">
                 </div>
-                <div class="form-group" id="contentGroup">
-                    <label>Content</label>
-                    <button type="button" class="strikethrough-btn" onclick="window.toggleStrikethrough()" title="Select text and click to strikethrough">⌫ Strikethrough</button>
-                    <div id="itemContent" contenteditable="true"></div>
-                </div>
-                <div class="form-group" id="progressGroup" style="display:none">
-                    <label>Progress (optional)</label>
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <input type="number" id="itemProgressCurrent" placeholder="Current" min="0" style="width: 150px;">
-                        <span style="color: var(--text-secondary);">out of</span>
-                        <input type="number" id="itemProgressTotal" placeholder="Total" min="1" style="width: 150px;">
-                    </div>
-                </div>
-                <div class="form-group" id="descriptionGroup" style="display:none">
-                    <label>Description</label>
-                    <button type="button" class="strikethrough-btn" onclick="window.toggleStrikethroughDescription()" title="Select text and click to strikethrough">⌫ Strikethrough</button>
-                    <div id="itemDescription" contenteditable="true" style="border: 1px solid var(--border); padding: 15px; border-radius: 6px; min-height: 150px; background: var(--bg-secondary); color: var(--text-primary);"></div>
-                </div>
-                <div class="form-group" id="urlGroup" style="display:none">
-                    <label>URL</label>
-                    <input type="url" id="itemUrl">
-                </div>
-                <div class="form-group" id="dueDateGroup" style="display:none">
-                    <label>Due Date</label>
-                    <input type="datetime-local" id="itemDueDate">
-                </div>
-                <div class="form-group" id="priorityGroup" style="display:none">
-                    <label>Priority</label>
-                    <select id="itemPriority">
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                    </select>
-                </div>
-                <div class="form-group" id="startDateGroup" style="display:none">
-                    <label>Start Date</label>
-                    <input type="datetime-local" id="itemStartDate">
-                </div>
-                <div class="form-group" id="endDateGroup" style="display:none">
-                    <label>End Date</label>
-                    <input type="datetime-local" id="itemEndDate">
-                </div>
-                <div class="form-group">
-                    <label>Tags (comma-separated)</label>
-                    <input type="text" id="itemTags">
-                </div>
-                <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                    <button type="button" class="btn btn-secondary" onclick="window.closeModal()">Cancel</button>
-                    <button type="button" class="btn" onclick="window.saveItem()">Save</button>
-                </div>
-            </form>
+            </div>
+            <div class="form-group" id="descriptionGroup" style="display:none">
+                <label>Description</label>
+                <div id="itemDescription" contenteditable="true" style="min-height:120px;"></div>
+            </div>
+            <div class="form-group" id="urlGroup" style="display:none">
+                <label>URL</label>
+                <input type="url" id="itemUrl">
+            </div>
+            <div class="form-group" id="dueDateGroup" style="display:none">
+                <label>Due Date</label>
+                <input type="datetime-local" id="itemDueDate">
+            </div>
+            <div class="form-group" id="priorityGroup" style="display:none">
+                <label>Priority</label>
+                <select id="itemPriority">
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="high">High</option>
+                </select>
+            </div>
+            <div class="form-group" id="startDateGroup" style="display:none">
+                <label>Start Date</label>
+                <input type="datetime-local" id="itemStartDate">
+            </div>
+            <div class="form-group" id="endDateGroup" style="display:none">
+                <label>End Date</label>
+                <input type="datetime-local" id="itemEndDate">
+            </div>
+            <div class="form-group">
+                <label>Tags (comma-separated)</label>
+                <input type="text" id="itemTags">
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button class="btn btn-secondary" onclick="window.closeModal()">Cancel</button>
+                <button class="btn" onclick="window.saveItem()">Save</button>
+            </div>
         </div>
     </div>
 
-    <div class="modal" id="settingsModal">
+    <!-- ═══ SLOT MANAGER MODAL ═══ -->
+    <div class="modal" id="slotManagerModal">
         <div class="modal-content">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                <h3>Settings</h3> //ngl this took FOREVER to get working, same with notifications but at least those werent very fickle
-                <button style="border: none; background: none; font-size: 1.5rem; cursor: pointer; color: var(--text-primary);" onclick="window.closeSettings()">&times;</button>
+            <div style="display:flex;justify-content:space-between;margin-bottom:20px;">
+                <div>
+                    <h3>🗄️ Data Slots</h3>
+                    <p style="font-size:0.82rem;color:var(--text-secondary);margin-top:4px;">Each slot is a fully independent data environment. Switch freely — your data never mixes.</p>
+                </div>
+                <button style="border:none;background:none;font-size:1.5rem;cursor:pointer;color:var(--text-primary);" onclick="window.closeSlotManager()">&times;</button>
+            </div>
+            <div class="slot-manager-grid" id="slotManagerGrid"></div>
+            <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);display:flex;gap:10px;">
+                <button class="btn" onclick="window.openCreateSlot()">+ Create New Slot</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ CREATE SLOT MODAL ═══ -->
+    <div class="modal" id="createSlotModal">
+        <div class="modal-content" style="max-width:460px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:18px;">
+                <h3>Create New Slot</h3>
+                <button style="border:none;background:none;font-size:1.5rem;cursor:pointer;color:var(--text-primary);" onclick="window.closeCreateSlot()">&times;</button>
             </div>
             <div class="form-group">
-                <label>
-                    <input type="checkbox" id="notificationsEnabled"> Enable Notifications
-                </label>
+                <label>Slot Name</label>
+                <input type="text" id="newSlotName" placeholder="e.g. Work, Personal, Archive...">
+            </div>
+            <div class="form-group">
+                <label>Slot Description (optional)</label>
+                <input type="text" id="newSlotDesc" placeholder="What is this slot for?">
+            </div>
+            <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:16px;">
+                <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:6px;">A unique security key will be generated for this slot. You'll need it to delete the slot.</p>
+                <div id="generatedKeyPreview" style="font-family:monospace;font-size:0.85rem;color:var(--accent);letter-spacing:0.08em;">Generating...</div>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <button class="btn btn-secondary" onclick="window.closeCreateSlot()">Cancel</button>
+                <button class="btn btn-success" onclick="window.createSlot()">Create Slot</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ SLOT KEY VIEW MODAL ═══ -->
+    <div class="modal" id="viewKeyModal">
+        <div class="modal-content" style="max-width:460px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:18px;">
+                <h3>🔑 Slot Security Key</h3>
+                <button style="border:none;background:none;font-size:1.5rem;cursor:pointer;color:var(--text-primary);" onclick="document.getElementById('viewKeyModal').classList.remove('active')">&times;</button>
+            </div>
+            <p style="font-size:0.88rem;color:var(--text-secondary);margin-bottom:14px;">This is your slot's unique key. Required to delete this slot. Store it somewhere safe.</p>
+            <div id="viewKeyDisplay" class="verify-key-display" style="color:var(--slot-gold);"></div>
+            <p style="font-size:0.78rem;color:var(--text-secondary);text-align:center;">Click/tap the key above to copy it</p>
+            <div style="margin-top:16px;text-align:center;">
+                <button class="btn" onclick="document.getElementById('viewKeyModal').classList.remove('active')">Got it</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ VERIFICATION / DELETE SLOT MODAL ═══ -->
+    <div class="modal" id="verifyModal">
+        <div class="modal-content" style="max-width:460px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:14px;">
+                <h3 style="color:var(--danger);">⚠️ Delete Slot</h3>
+                <button style="border:none;background:none;font-size:1.5rem;cursor:pointer;color:var(--text-primary);" onclick="window.closeVerify()">&times;</button>
+            </div>
+            <div class="verify-steps-indicator" id="verifyStepDots"></div>
+
+            <!-- Step 1: Show key, enter it -->
+            <div class="verify-step active" id="verifyStep1">
+                <p style="font-weight:600;margin-bottom:8px;">Step 1 of 3 — Enter the slot's security key</p>
+                <div class="verify-warning">⚠️ Deleting this slot will permanently erase ALL data in it. This cannot be undone unless you have a backup export.</div>
+                <p style="font-size:0.85rem;color:var(--text-secondary);margin:10px 0;">The key for slot <strong id="verifySlotName"></strong>:</p>
+                <div id="verifyKeyHint" class="verify-key-display" style="font-size:0.78rem;color:var(--text-secondary);letter-spacing:0.04em;">Click to reveal</div>
+                <div class="form-group" style="margin-top:12px;">
+                    <label>Type the key exactly:</label>
+                    <input type="text" id="verifyKeyInput" placeholder="Paste or type the security key..." style="font-family:monospace;letter-spacing:0.06em;">
+                </div>
+                <button class="btn btn-danger" onclick="window.verifyStep1()">Continue →</button>
+            </div>
+
+            <!-- Step 2: Type slot name -->
+            <div class="verify-step" id="verifyStep2">
+                <p style="font-weight:600;margin-bottom:8px;">Step 2 of 3 — Confirm slot name</p>
+                <p style="font-size:0.88rem;color:var(--text-secondary);margin-bottom:10px;">Type the slot name to confirm you know what you're deleting:</p>
+                <div style="background:var(--bg-tertiary);padding:8px 12px;border-radius:6px;font-weight:700;margin-bottom:12px;" id="verifySlotNameDisplay"></div>
+                <input type="text" id="verifyNameInput" placeholder="Type slot name exactly...">
+                <button class="btn btn-danger" style="margin-top:12px;" onclick="window.verifyStep2()">Continue →</button>
+            </div>
+
+            <!-- Step 3: Final checkbox + delete -->
+            <div class="verify-step" id="verifyStep3">
+                <p style="font-weight:600;margin-bottom:10px;">Step 3 of 3 — Final confirmation</p>
+                <div class="verify-warning">This will permanently delete the slot and all its data. There is NO undo.</div>
+                <div style="margin:16px 0;">
+                    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+                        <input type="checkbox" id="verifyCheck1"> I understand all data in this slot will be permanently deleted
+                    </label>
+                    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-top:8px;">
+                        <input type="checkbox" id="verifyCheck2"> I have exported any data I want to keep
+                    </label>
+                </div>
+                <div style="display:flex;gap:10px;">
+                    <button class="btn btn-secondary" onclick="window.closeVerify()">Cancel</button>
+                    <button class="btn btn-danger" onclick="window.verifyStep3()">🗑️ Delete Slot Forever</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ TRANSFER DATA MODAL ═══ -->
+    <div class="modal" id="transferModal">
+        <div class="modal-content">
+            <div style="display:flex;justify-content:space-between;margin-bottom:16px;">
+                <div>
+                    <h3>🔀 Transfer Data Between Slots</h3>
+                    <p style="font-size:0.82rem;color:var(--text-secondary);margin-top:4px;">Select items to copy or move to another slot.</p>
+                </div>
+                <button style="border:none;background:none;font-size:1.5rem;cursor:pointer;color:var(--text-primary);" onclick="window.closeTransfer()">&times;</button>
+            </div>
+
+            <div class="form-group">
+                <label>Source Slot</label>
+                <select id="transferSource" onchange="window.loadTransferItems()"></select>
+            </div>
+            <div class="form-group">
+                <label>Destination Slot</label>
+                <select id="transferDest"></select>
+            </div>
+
+            <div id="transferItemsContainer"></div>
+
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+                <button class="btn btn-secondary" onclick="window.closeTransfer()">Cancel</button>
+                <button class="btn btn-warning" onclick="window.executeTransfer('move')">✂️ Move Selected</button>
+                <button class="btn btn-success" onclick="window.executeTransfer('copy')">📋 Copy Selected</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ SETTINGS MODAL ═══ -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content" style="max-width:460px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:18px;">
+                <h3>Settings</h3>
+                <button style="border:none;background:none;font-size:1.5rem;cursor:pointer;color:var(--text-primary);" onclick="window.closeSettings()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label><input type="checkbox" id="notificationsEnabled" style="width:auto;margin-right:8px;"> Enable Notifications</label>
             </div>
             <div class="form-group">
                 <label>Notify before events (minutes)</label>
@@ -855,978 +674,1005 @@
     </div>
 
     <script>
-        // Global variables
-        window.db = null;
-        window.currentView = 'notes';
-        window.currentItemId = null;
-        window.settings = {};
-        window.notificationHistory = new Set();
-        window.notificationCheckInterval = null;
-        window.notificationLog = [];
-        window.notificationSound = null;
+    // ═══════════════════════════════════════════════════════════
+    //  SLOT SYSTEM CORE
+    // ═══════════════════════════════════════════════════════════
 
-        // Initialize database
-        async function initDB() {
-            console.log('Initializing database...');
-            window.db = new Dexie('UniversalOrganizer');
-            window.db.version(1).stores({
-                notes: '++id, title, createdAt, updatedAt',
-                tasks: '++id, title, status, priority, dueDate, createdAt',
-                events: '++id, title, start, end, createdAt',
-                bookmarks: '++id, title, url, createdAt',
-                settings: 'id',
-                notifiedItems: 'id'
-            });
-            
-            // Add version 2 with position field
-            window.db.version(2).stores({
-                notes: '++id, title, createdAt, updatedAt',
-                tasks: '++id, title, status, priority, dueDate, createdAt',
-                events: '++id, title, start, end, createdAt',
-                bookmarks: '++id, title, url, createdAt, position',
-                settings: 'id',
-                notifiedItems: 'id'
-            }).upgrade(async tx => {
-                // Migrate existing bookmarks to have position
-                const bookmarks = await tx.table('bookmarks').toArray();
-                for (let i = 0; i < bookmarks.length; i++) {
-                    await tx.table('bookmarks').update(bookmarks[i].id, { position: i });
-                }
-            });
+    const SLOTS_META_KEY = 'bilon_slots_meta';
+    const CURRENT_SLOT_KEY = 'bilon_current_slot';
 
-            const stored = await window.db.settings.get(1);
-            window.settings = stored || { theme: 'light', notificationsEnabled: true, eventNotifyMinutes: 30 };
-            if (window.settings.theme === 'dark') {
-                document.body.classList.add('dark-mode');
-            }
-            
-            // 
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            window.notificationSound = function() {
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                
-                oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-                oscillator.frequency.setValueAtTime(1000, audioContext.currentTime + 0.1);
-                
-                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-                
-                oscillator.start(audioContext.currentTime);
-                oscillator.stop(audioContext.currentTime + 0.3);
+    // Slot meta = { id, name, desc, key, createdAt, counts:{notes,tasks,events,bookmarks} }
+    function loadSlotsMeta() {
+        try { return JSON.parse(localStorage.getItem(SLOTS_META_KEY)) || []; }
+        catch(e) { return []; }
+    }
+    function saveSlotsMeta(slots) {
+        localStorage.setItem(SLOTS_META_KEY, JSON.stringify(slots));
+    }
+    function getCurrentSlotId() {
+        return localStorage.getItem(CURRENT_SLOT_KEY) || 'default';
+    }
+    function setCurrentSlotId(id) {
+        localStorage.setItem(CURRENT_SLOT_KEY, id);
+    }
+    function generateSlotKey() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let k = '';
+        for (let i = 0; i < 24; i++) {
+            if (i > 0 && i % 6 === 0) k += '-';
+            k += chars[Math.floor(Math.random() * chars.length)];
+        }
+        return k;
+    }
+    function dbNameForSlot(slotId) {
+        return `Bilon_${slotId}`;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  DATABASE PER SLOT
+    // ═══════════════════════════════════════════════════════════
+
+    async function openSlotDB(slotId) {
+        const db = new Dexie(dbNameForSlot(slotId));
+        db.version(1).stores({
+            notes:     '++id, title, createdAt, updatedAt',
+            tasks:     '++id, title, status, priority, dueDate, createdAt',
+            events:    '++id, title, start, end, createdAt',
+            bookmarks: '++id, title, url, createdAt, position',
+            settings:  'id'
+        });
+        await db.open();
+        return db;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  GLOBALS
+    // ═══════════════════════════════════════════════════════════
+
+    window.db = null;
+    window.currentView = 'notes';
+    window.currentItemId = null;
+    window.settings = {};
+    window.notificationHistory = new Set();
+    window.notificationLog = [];
+    window.notificationCheckInterval = null;
+    window._pendingDeleteSlotId = null;
+    window._pendingNewSlotKey = null;
+    window._verifyCurrentStep = 1;
+
+    // ═══════════════════════════════════════════════════════════
+    //  INIT
+    // ═══════════════════════════════════════════════════════════
+
+    async function initApp() {
+        // Ensure default slot exists
+        let slots = loadSlotsMeta();
+        if (slots.length === 0) {
+            const defaultSlot = {
+                id: 'default',
+                name: 'Default',
+                desc: 'Your main workspace',
+                key: generateSlotKey(),
+                createdAt: new Date().toISOString()
             };
-            
-            console.log('Database initialized');
+            slots.push(defaultSlot);
+            saveSlotsMeta(slots);
         }
 
-        // Theme toggle
-        window.toggleTheme = function() {
-            document.body.classList.toggle('dark-mode');
-            window.settings.theme = document.body.classList.contains('dark-mode') ? 'dark' : 'light';
-            window.db.settings.put({ ...window.settings, id: 1 });
-        };
-
-        // Switch view
-        window.switchView = function(view, el) {
-            console.log('Switching to view:', view);
-            window.currentView = view;
-            document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
-            if (el) el.classList.add('active');
-            
-            const titles = { notes: 'Notes', tasks: 'Tasks', calendar: 'Calendar', bookmarks: 'Bookmarks' };
-            document.getElementById('viewTitle').textContent = titles[view];
-            window.renderView();
-        };
-
-        // Drag and Drop functionality for bookmarks
-        let draggedElement = null;
-        let draggedId = null;
-
-        function handleDragStart(e) {
-            draggedElement = this;
-            draggedId = parseInt(this.dataset.bookmarkId);
-            this.classList.add('dragging');
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', draggedId);
-            console.log('Drag started for bookmark:', draggedId);
+        const currentId = getCurrentSlotId();
+        const exists = slots.find(s => s.id === currentId);
+        if (!exists) {
+            setCurrentSlotId(slots[0].id);
         }
 
-        function handleDragEnd(e) {
-            this.classList.remove('dragging');
-            document.querySelectorAll('.card').forEach(card => {
-                card.classList.remove('drag-over');
-            });
-            console.log('Drag ended');
+        await switchToSlot(getCurrentSlotId(), false);
+        renderSlotBar();
+        updateESTClock();
+        setInterval(updateESTClock, 1000);
+        window.startNotificationSystem();
+    }
+
+    async function switchToSlot(slotId, reRender = true) {
+        if (window.db) {
+            try { window.db.close(); } catch(e) {}
+        }
+        setCurrentSlotId(slotId);
+        window.db = await openSlotDB(slotId);
+
+        // Load settings for this slot
+        const stored = await window.db.settings.get(1).catch(() => null);
+        window.settings = stored || { theme: 'light', notificationsEnabled: true, eventNotifyMinutes: 30 };
+        if (window.settings.theme === 'dark') {
+            document.body.classList.add('dark-mode');
+        } else {
+            document.body.classList.remove('dark-mode');
         }
 
-        function handleDragOver(e) {
-            if (e.preventDefault) {
-                e.preventDefault();
-            }
-            e.dataTransfer.dropEffect = 'move';
-            return false;
-        }
+        renderSlotBar();
+        updateCurrentSlotLabel();
+        if (reRender) await window.renderView();
+    }
 
-        function handleDragEnter(e) {
-            if (this !== draggedElement && this.classList.contains('card')) {
-                this.classList.add('drag-over');
-            }
-        }
-
-        function handleDragLeave(e) {
-            if (e.target === this) {
-                this.classList.remove('drag-over');
-            }
-        }
-
-        async function handleDrop(e) {
-            if (e.stopPropagation) {
-                e.stopPropagation();
-            }
-            if (e.preventDefault) {
-                e.preventDefault();
-            }
-
-            this.classList.remove('drag-over');
-
-            if (draggedElement !== this && this.classList.contains('card')) {
-                const targetId = parseInt(this.dataset.bookmarkId);
-                console.log('Dropping bookmark', draggedId, 'onto', targetId);
-                await swapBookmarkPositions(draggedId, targetId);
-            }
-
-            return false;
-        }
-
-        async function swapBookmarkPositions(id1, id2) {
-            try {
-                console.log('Swapping positions for bookmarks:', id1, id2);
-                const bookmark1 = await window.db.bookmarks.get(id1);
-                const bookmark2 = await window.db.bookmarks.get(id2);
-
-                if (!bookmark1 || !bookmark2) {
-                    console.error('Could not find bookmarks');
-                    return;
+    function renderSlotBar() {
+        const slots = loadSlotsMeta();
+        const currentId = getCurrentSlotId();
+        const chipsEl = document.getElementById('slotChips');
+        chipsEl.innerHTML = '';
+        slots.forEach(slot => {
+            const chip = document.createElement('div');
+            chip.className = 'slot-chip' + (slot.id === currentId ? ' slot-active' : '');
+            chip.innerHTML = `<span class="slot-dot"></span>${slot.name}`;
+            chip.title = `Switch to "${slot.name}"`;
+            chip.onclick = () => {
+                if (slot.id !== getCurrentSlotId()) {
+                    switchToSlot(slot.id);
                 }
-
-                const pos1 = bookmark1.position !== undefined ? bookmark1.position : 0;
-                const pos2 = bookmark2.position !== undefined ? bookmark2.position : 0;
-
-                console.log('Swapping positions:', pos1, 'and', pos2);
-
-                await window.db.bookmarks.update(id1, { position: pos2 });
-                await window.db.bookmarks.update(id2, { position: pos1 });
-
-                console.log('Positions swapped, re-rendering...');
-                await window.renderView();
-            } catch (err) {
-                console.error('Error swapping positions:', err);
-                alert('Error swapping positions: ' + err.message);
-            }
-        }
-
-        // Render view
-        window.renderView = async function() {
-            console.log('Rendering view:', window.currentView);
-            const grid = document.getElementById('contentGrid');
-            grid.innerHTML = '';
-
-            try {
-                if (window.currentView === 'notes') {
-                    const notes = await window.db.notes.reverse().sortBy('updatedAt');
-                    console.log('Notes:', notes);
-                    notes.forEach(note => {
-                        const card = document.createElement('div');
-                        card.className = 'card';
-                        card.onclick = () => window.editItem(note.id);
-                        
-                        let progressHTML = '';
-                        if (note.progressCurrent !== undefined && note.progressTotal !== undefined && note.progressTotal > 0) {
-                            const percentage = Math.round((note.progressCurrent / note.progressTotal) * 100);
-                            progressHTML = `
-                                <div class="progress-wrapper">
-                                    <div class="progress-label">
-                                        <span>${note.progressCurrent} / ${note.progressTotal}</span>
-                                        <span class="progress-percent">${percentage}%</span>
-                                    </div>
-                                    <div class="progress-bar-container">
-                                        <div class="progress-bar-fill" style="width: ${percentage}%"></div>
-                                    </div>
-                                </div>
-                            `;
-                        }
-                        
-                        card.innerHTML = `
-                            <h3>${note.title}</h3>
-                            <div class="card-content">${note.content || ''}</div>
-                            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 10px;">${new Date(note.updatedAt).toLocaleDateString()}</div>
-                            ${progressHTML}
-                        `;
-                        const delBtn = document.createElement('button');
-                        delBtn.textContent = '🗑️ Delete';
-                        delBtn.className = 'btn btn-small btn-secondary';
-                        delBtn.style.marginTop = '10px';
-                        delBtn.dataset.noteId = note.id;
-                        delBtn.addEventListener('click', function(e) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            const id = parseInt(this.dataset.noteId);
-                            console.log('CLICKED DELETE FOR NOTE ID:', id);
-                            if (confirm('Delete this note?')) {
-                                console.log('User confirmed, deleting...');
-                                window.db.notes.delete(id).then(() => {
-                                    console.log('Deleted from DB');
-                                    window.renderView();
-                                }).catch(err => {
-                                    console.error('Delete failed:', err);
-                                    alert('Delete failed: ' + err.message);
-                                });
-                            }
-                        });
-                        card.appendChild(delBtn);
-                        grid.appendChild(card);
-                    });
-                } else if (window.currentView === 'tasks') {
-                    const tasks = await window.db.tasks.toArray();
-                    console.log('Tasks:', tasks);
-                    tasks.forEach(task => {
-                        const item = document.createElement('div');
-                        item.className = `task-item priority-${task.priority || 'low'}`;
-                        
-                        let progressHTML = '';
-                        if (task.progressCurrent !== undefined && task.progressTotal !== undefined && task.progressTotal > 0) {
-                            const percentage = Math.round((task.progressCurrent / task.progressTotal) * 100);
-                            progressHTML = `
-                                <div class="progress-wrapper">
-                                    <div class="progress-label">
-                                        <span>${task.progressCurrent} / ${task.progressTotal}</span>
-                                        <span class="progress-percent">${percentage}%</span>
-                                    </div>
-                                    <div class="progress-bar-container">
-                                        <div class="progress-bar-fill" style="width: ${percentage}%"></div>
-                                    </div>
-                                </div>
-                            `;
-                        }
-                        
-                        item.innerHTML = `
-                            <input type="checkbox" ${task.status === 'completed' ? 'checked' : ''} onclick="window.toggleTask(${task.id})">
-                            <div style="flex: 1;">
-                                <div style="font-weight: 500; cursor: pointer;" onclick="window.editItem(${task.id})">${task.title}</div>
-                                ${task.dueDate ? `<div style="font-size: 0.85rem; color: var(--text-secondary);">Due: ${new Date(task.dueDate).toLocaleString()}</div>` : ''}
-                                ${progressHTML}
-                            </div>
-                        `;
-                        const delBtn = document.createElement('button');
-                        delBtn.textContent = '🗑️ Delete';
-                        delBtn.className = 'btn btn-small btn-secondary';
-                        delBtn.dataset.taskId = task.id;
-                        delBtn.addEventListener('click', function(e) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            const id = parseInt(this.dataset.taskId);
-                            console.log('CLICKED DELETE FOR TASK ID:', id);
-                            if (confirm('Delete this task?')) {
-                                console.log('User confirmed, deleting...');
-                                window.db.tasks.delete(id).then(() => {
-                                    console.log('Deleted from DB');
-                                    window.renderView();
-                                }).catch(err => {
-                                    console.error('Delete failed:', err);
-                                    alert('Delete failed: ' + err.message);
-                                });
-                            }
-                        });
-                        item.appendChild(delBtn);
-                        grid.appendChild(item);
-                    });
-                } else if (window.currentView === 'calendar') {
-                    const events = await window.db.events.orderBy('start').toArray();
-                    console.log('Events:', events);
-                    events.forEach(event => {
-                        const card = document.createElement('div');
-                        card.className = 'card';
-                        card.onclick = () => window.editItem(event.id);
-                        card.style.background = 'var(--accent)';
-                        card.style.color = 'white';
-                        card.innerHTML = `
-                            <h3>${event.title}</h3>
-                            <div style="margin-top: 10px;">${new Date(event.start).toLocaleDateString()} - ${new Date(event.end).toLocaleDateString()}</div>
-                            ${event.description ? `<div style="margin-top: 10px;">${event.description}</div>` : ''}
-                        `;
-                        const delBtn = document.createElement('button');
-                        delBtn.textContent = '🗑️ Delete';
-                        delBtn.className = 'btn btn-small btn-secondary';
-                        delBtn.style.marginTop = '10px';
-                        delBtn.dataset.eventId = event.id;
-                        delBtn.addEventListener('click', function(e) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            const id = parseInt(this.dataset.eventId);
-                            console.log('CLICKED DELETE FOR EVENT ID:', id);
-                            if (confirm('Delete this event?')) {
-                                console.log('User confirmed, deleting...');
-                                window.db.events.delete(id).then(() => {
-                                    console.log('Deleted from DB');
-                                    window.renderView();
-                                }).catch(err => {
-                                    console.error('Delete failed:', err);
-                                    alert('Delete failed: ' + err.message);
-                                });
-                            }
-                        });
-                        card.appendChild(delBtn);
-                        grid.appendChild(card);
-                    });
-                } else if (window.currentView === 'bookmarks') {
-                    const bookmarks = await window.db.bookmarks.orderBy('position').toArray();
-                    console.log('Bookmarks:', bookmarks);
-                    
-                    // Ensure all bookmarks have a position
-                    let needsUpdate = false;
-                    for (let i = 0; i < bookmarks.length; i++) {
-                        if (bookmarks[i].position === undefined || bookmarks[i].position === null) {
-                            await window.db.bookmarks.update(bookmarks[i].id, { position: i });
-                            needsUpdate = true;
-                        }
-                    }
-                    
-                    if (needsUpdate) {
-                        const updatedBookmarks = await window.db.bookmarks.orderBy('position').toArray();
-                        bookmarks.length = 0;
-                        bookmarks.push(...updatedBookmarks);
-                    }
-                    
-                    bookmarks.forEach((bookmark, index) => {
-                        const card = document.createElement('div');
-                        card.className = 'card';
-                        card.draggable = true;
-                        card.dataset.bookmarkId = bookmark.id;
-                        card.dataset.position = bookmark.position !== undefined ? bookmark.position : index;
-                        
-                        card.addEventListener('dragstart', handleDragStart);
-                        card.addEventListener('dragend', handleDragEnd);
-                        card.addEventListener('dragover', handleDragOver);
-                        card.addEventListener('drop', handleDrop);
-                        card.addEventListener('dragleave', handleDragLeave);
-                        card.addEventListener('dragenter', handleDragEnter);
-                        
-                        card.innerHTML = `
-                            <h3 style="pointer-events: none;">${bookmark.title}</h3>
-                            <a href="${bookmark.url}" target="_blank" style="color: var(--accent); word-break: break-all; pointer-events: auto;">${bookmark.url}</a>
-                        `;
-                        
-                        const delBtn = document.createElement('button');
-                        delBtn.textContent = '🗑️ Delete';
-                        delBtn.className = 'btn btn-small btn-secondary';
-                        delBtn.style.marginTop = '10px';
-                        delBtn.style.pointerEvents = 'auto';
-                        delBtn.dataset.bookmarkId = bookmark.id;
-                        delBtn.onclick = function(e) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            const id = parseInt(this.dataset.bookmarkId);
-                            console.log('CLICKED DELETE FOR BOOKMARK ID:', id);
-                            if (confirm('Delete this bookmark?')) {
-                                console.log('User confirmed, deleting...');
-                                window.db.bookmarks.delete(id).then(() => {
-                                    console.log('Deleted from DB');
-                                    window.renderView();
-                                }).catch(err => {
-                                    console.error('Delete failed:', err);
-                                    alert('Delete failed: ' + err.message);
-                                });
-                            }
-                        };
-                        card.appendChild(delBtn);
-                        
-                        const editBtn = document.createElement('button');
-                        editBtn.textContent = '✏️ Edit';
-                        editBtn.className = 'btn btn-small';
-                        editBtn.style.marginTop = '10px';
-                        editBtn.style.marginLeft = '5px';
-                        editBtn.style.pointerEvents = 'auto';
-                        editBtn.onclick = function(e) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            window.editItem(bookmark.id);
-                        };
-                        card.appendChild(editBtn);
-                        
-                        grid.appendChild(card);
-                    });
-                }
-            } catch (error) {
-                console.error('Error rendering view:', error);
-            }
-        };
-
-        // Create new
-        window.createNew = function() {
-            console.log('Creating new item');
-            window.currentItemId = null;
-            document.getElementById('itemModal').classList.add('active');
-            document.getElementById('itemForm').reset();
-            document.getElementById('itemContent').innerHTML = '';
-            document.getElementById('itemTitle').innerHTML = '';
-            
-            document.getElementById('contentGroup').style.display = window.currentView === 'notes' ? 'block' : 'none';
-            document.getElementById('progressGroup').style.display = window.currentView === 'notes' || window.currentView === 'tasks' ? 'block' : 'none';
-            document.getElementById('descriptionGroup').style.display = window.currentView === 'calendar' ? 'block' : 'none';
-            document.getElementById('urlGroup').style.display = window.currentView === 'bookmarks' ? 'block' : 'none';
-            document.getElementById('dueDateGroup').style.display = window.currentView === 'tasks' ? 'block' : 'none';
-            document.getElementById('priorityGroup').style.display = window.currentView === 'tasks' ? 'block' : 'none';
-            document.getElementById('startDateGroup').style.display = window.currentView === 'calendar' ? 'block' : 'none';
-            document.getElementById('endDateGroup').style.display = window.currentView === 'calendar' ? 'block' : 'none';
-            
-            const titles = { notes: 'New Note', tasks: 'New Task', calendar: 'New Event', bookmarks: 'New Bookmark' };
-            document.getElementById('modalTitle').textContent = titles[window.currentView];
-        };
-
-        // Edit item
-        window.editItem = async function(id) {
-            if (!id || isNaN(id)) return;
-            console.log('Editing item:', id);
-            window.currentItemId = id;
-            let item;
-            
-            if (window.currentView === 'notes') item = await window.db.notes.get(id);
-            else if (window.currentView === 'tasks') item = await window.db.tasks.get(id);
-            else if (window.currentView === 'calendar') item = await window.db.events.get(id);
-            else if (window.currentView === 'bookmarks') item = await window.db.bookmarks.get(id);
-            
-            if (!item) return;
-            
-            document.getElementById('itemModal').classList.add('active');
-            document.getElementById('itemTitle').innerHTML = item.title;
-            
-            document.getElementById('contentGroup').style.display = 'none';
-            document.getElementById('progressGroup').style.display = 'none';
-            document.getElementById('descriptionGroup').style.display = 'none';
-            document.getElementById('urlGroup').style.display = 'none';
-            document.getElementById('dueDateGroup').style.display = 'none';
-            document.getElementById('priorityGroup').style.display = 'none';
-            document.getElementById('startDateGroup').style.display = 'none';
-            document.getElementById('endDateGroup').style.display = 'none';
-            
-            if (window.currentView === 'notes') {
-                document.getElementById('itemContent').innerHTML = item.content || '';
-                document.getElementById('itemProgressCurrent').value = item.progressCurrent || '';
-                document.getElementById('itemProgressTotal').value = item.progressTotal || '';
-                document.getElementById('contentGroup').style.display = 'block';
-                document.getElementById('progressGroup').style.display = 'block';
-            }
-            if (window.currentView === 'tasks') {
-                document.getElementById('itemDueDate').value = item.dueDate || '';
-                document.getElementById('itemPriority').value = item.priority || 'medium';
-                document.getElementById('itemProgressCurrent').value = item.progressCurrent || '';
-                document.getElementById('itemProgressTotal').value = item.progressTotal || '';
-                document.getElementById('dueDateGroup').style.display = 'block';
-                document.getElementById('priorityGroup').style.display = 'block';
-                document.getElementById('progressGroup').style.display = 'block';
-            }
-            if (window.currentView === 'calendar') {
-                document.getElementById('itemDescription').innerHTML = item.description || '';
-                document.getElementById('itemStartDate').value = item.start || '';
-                document.getElementById('itemEndDate').value = item.end || '';
-                document.getElementById('descriptionGroup').style.display = 'block';
-                document.getElementById('startDateGroup').style.display = 'block';
-                document.getElementById('endDateGroup').style.display = 'block';
-            }
-            if (window.currentView === 'bookmarks') {
-                document.getElementById('itemUrl').value = item.url || '';
-                document.getElementById('urlGroup').style.display = 'block';
-            }
-            
-            document.getElementById('modalTitle').textContent = `Edit ${window.currentView.slice(0, -1)}`;
-        };
-
-        // Save item
-        window.saveItem = async function() {
-            console.log('Saving item...');
-            const title = document.getElementById('itemTitle').innerText || document.getElementById('itemTitle').textContent;
-            if (!title.trim()) {
-                alert('Please enter a title');
-                return;
-            }
-            
-            const now = new Date().toISOString();
-            let item = { title: document.getElementById('itemTitle').innerHTML, updatedAt: now };
-            
-            if (!window.currentItemId) {
-                item.createdAt = now;
-            }
-            
-            try {
-                if (window.currentView === 'notes') {
-                    item.content = document.getElementById('itemContent').innerHTML;
-                    const progressCurrent = document.getElementById('itemProgressCurrent').value;
-                    const progressTotal = document.getElementById('itemProgressTotal').value;
-                    if (progressCurrent && progressTotal) {
-                        item.progressCurrent = parseFloat(progressCurrent);
-                        item.progressTotal = parseFloat(progressTotal);
-                    }
-                    if (window.currentItemId) {
-                        await window.db.notes.update(window.currentItemId, item);
-                        console.log('Note updated');
-                    } else {
-                        const id = await window.db.notes.add(item);
-                        console.log('Note added with id:', id);
-                    }
-                } else if (window.currentView === 'tasks') {
-                    item.dueDate = document.getElementById('itemDueDate').value;
-                    item.priority = document.getElementById('itemPriority').value;
-                    item.status = 'pending';
-                    const progressCurrent = document.getElementById('itemProgressCurrent').value;
-                    const progressTotal = document.getElementById('itemProgressTotal').value;
-                    if (progressCurrent && progressTotal) {
-                        item.progressCurrent = parseFloat(progressCurrent);
-                        item.progressTotal = parseFloat(progressTotal);
-                    }
-                    if (window.currentItemId) {
-                        await window.db.tasks.update(window.currentItemId, item);
-                        console.log('Task updated');
-                    } else {
-                        const id = await window.db.tasks.add(item);
-                        console.log('Task added with id:', id);
-                    }
-                } else if (window.currentView === 'calendar') {
-                    item.description = document.getElementById('itemDescription').innerHTML;
-                    item.start = document.getElementById('itemStartDate').value;
-                    item.end = document.getElementById('itemEndDate').value;
-                    if (window.currentItemId) {
-                        await window.db.events.update(window.currentItemId, item);
-                        console.log('Event updated');
-                    } else {
-                        const id = await window.db.events.add(item);
-                        console.log('Event added with id:', id);
-                    }
-                } else if (window.currentView === 'bookmarks') {
-                    item.url = document.getElementById('itemUrl').value;
-                    if (window.currentItemId) {
-                        await window.db.bookmarks.update(window.currentItemId, item);
-                        console.log('Bookmark updated');
-                    } else {
-                        const maxPosition = await window.db.bookmarks.orderBy('position').last();
-                        item.position = maxPosition ? (maxPosition.position || 0) + 1 : 0;
-                        const id = await window.db.bookmarks.add(item);
-                        console.log('Bookmark added with id:', id);
-                    }
-                }
-                
-                window.closeModal();
-                await window.renderView();
-                console.log('Item saved successfully');
-            } catch (error) {
-                console.error('Error saving item:', error);
-                alert('Error saving item: ' + error.message);
-            }
-        };
-
-        window.closeModal = function() {
-            document.getElementById('itemModal').classList.remove('active');
-        };
-
-        // Toggle task
-        window.toggleTask = async function(id) {
-            const task = await window.db.tasks.get(id);
-            await window.db.tasks.update(id, { status: task.status === 'completed' ? 'pending' : 'completed' });
-            window.renderView();
-        };
-
-        // Notification System
-        window.showNotification = function(type, title, message, uniqueId) {
-            if (window.notificationHistory.has(uniqueId)) return;
-            window.notificationHistory.add(uniqueId);
-            
-            if (window.notificationSound) {
-                try {
-                    window.notificationSound();
-                } catch (e) {
-                    console.log('Could not play sound:', e);
-                }
-            }
-            
-            const logEntry = {
-                type,
-                title,
-                message,
-                time: new Date().toLocaleTimeString('en-US', { 
-                    timeZone: 'America/New_York',
-                    hour: 'numeric',
-                    minute: '2-digit',
-                    second: '2-digit'
-                }),
-                id: uniqueId
             };
-            window.notificationLog.unshift(logEntry);
-            window.updateNotificationLog();
-            window.updateNotificationBadge();
-            
-            const container = document.getElementById('notificationContainer');
-            const notif = document.createElement('div');
-            notif.className = `notification ${type}`;
-            notif.innerHTML = `
-                <div class="notification-icon">${type === 'danger' ? '⚠️' : type === 'warning' ? '⏰' : 'ℹ️'}</div>
-                <div class="notification-content">
-                    <div class="notification-title">${title}</div>
-                    <div class="notification-message">${message}</div>
+            chipsEl.appendChild(chip);
+        });
+    }
+
+    function updateCurrentSlotLabel() {
+        const slots = loadSlotsMeta();
+        const slot = slots.find(s => s.id === getCurrentSlotId());
+        const el = document.getElementById('currentSlotLabel');
+        if (slot) {
+            el.textContent = `Slot: ${slot.name}${slot.desc ? ' — ' + slot.desc : ''}`;
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  SLOT MANAGER
+    // ═══════════════════════════════════════════════════════════
+
+    window.openSlotManager = async function() {
+        await renderSlotManagerGrid();
+        document.getElementById('slotManagerModal').classList.add('active');
+    };
+    window.closeSlotManager = function() {
+        document.getElementById('slotManagerModal').classList.remove('active');
+    };
+
+    async function getSlotCounts(slotId) {
+        try {
+            const db = await openSlotDB(slotId);
+            const counts = {
+                notes:     await db.notes.count(),
+                tasks:     await db.tasks.count(),
+                events:    await db.events.count(),
+                bookmarks: await db.bookmarks.count()
+            };
+            db.close();
+            return counts;
+        } catch(e) { return { notes:0, tasks:0, events:0, bookmarks:0 }; }
+    }
+
+    async function renderSlotManagerGrid() {
+        const slots = loadSlotsMeta();
+        const currentId = getCurrentSlotId();
+        const grid = document.getElementById('slotManagerGrid');
+        grid.innerHTML = '<div style="color:var(--text-secondary);font-size:0.85rem;grid-column:1/-1;">Loading slot data...</div>';
+
+        const cards = await Promise.all(slots.map(async slot => {
+            const counts = await getSlotCounts(slot.id);
+            const isCurrent = slot.id === currentId;
+            return `
+                <div class="slot-card ${isCurrent ? 'is-current' : ''}">
+                    ${isCurrent ? '<div class="slot-current-badge">● Active</div>' : ''}
+                    <div class="slot-card-header">
+                        <div>
+                            <div class="slot-card-name">${escHtml(slot.name)}</div>
+                            ${slot.desc ? `<div style="font-size:0.8rem;color:var(--text-secondary);margin-top:2px;">${escHtml(slot.desc)}</div>` : ''}
+                        </div>
+                    </div>
+                    <div class="slot-card-key" title="Security key (partial)">${slot.key.slice(0,8)}••••••••••••••••</div>
+                    <div class="slot-card-meta">
+                        📝 ${counts.notes} notes &nbsp;✓ ${counts.tasks} tasks<br>
+                        📅 ${counts.events} events &nbsp;🔖 ${counts.bookmarks} bookmarks
+                    </div>
+                    <div style="font-size:0.75rem;color:var(--text-secondary);">Created: ${new Date(slot.createdAt).toLocaleDateString()}</div>
+                    <div class="slot-card-actions">
+                        ${!isCurrent ? `<button class="btn btn-small btn-success" onclick="switchToSlot('${slot.id}');closeSlotManager();">↪ Switch</button>` : ''}
+                        <button class="btn btn-small btn-secondary" onclick="window.viewSlotKey('${slot.id}')">🔑 Key</button>
+                        ${slots.length > 1 ? `<button class="btn btn-small btn-danger" onclick="window.startDeleteSlot('${slot.id}')">🗑️ Delete</button>` : ''}
+                    </div>
                 </div>
-                <button class="notification-close" onclick="this.parentElement.remove()">×</button>
             `;
-            
-            container.appendChild(notif);
-            
-            setTimeout(() => {
-                if (notif.parentElement) {
-                    notif.remove();
-                }
-            }, 10000);
-        };
+        }));
 
-        window.updateNotificationLog = function() {
-            const body = document.getElementById('notificationPanelBody');
-            
-            if (window.notificationLog.length === 0) {
-                body.innerHTML = `
-                    <div class="notification-empty">
-                        <div class="notification-empty-icon">🔔</div>
-                        <div>No notifications yet</div>
+        grid.innerHTML = cards.join('');
+    }
+
+    window.viewSlotKey = function(slotId) {
+        const slots = loadSlotsMeta();
+        const slot = slots.find(s => s.id === slotId);
+        if (!slot) return;
+        const display = document.getElementById('viewKeyDisplay');
+        display.textContent = slot.key;
+        display.onclick = () => {
+            navigator.clipboard.writeText(slot.key).then(() => showNotif('success','Copied!','Key copied to clipboard.'));
+        };
+        document.getElementById('viewKeyModal').classList.add('active');
+    };
+
+    // ═══════════════════════════════════════════════════════════
+    //  CREATE SLOT
+    // ═══════════════════════════════════════════════════════════
+
+    window.openCreateSlot = function() {
+        window._pendingNewSlotKey = generateSlotKey();
+        document.getElementById('newSlotName').value = '';
+        document.getElementById('newSlotDesc').value = '';
+        document.getElementById('generatedKeyPreview').textContent = window._pendingNewSlotKey;
+        document.getElementById('createSlotModal').classList.add('active');
+        document.getElementById('slotManagerModal').classList.remove('active');
+    };
+    window.closeCreateSlot = function() {
+        document.getElementById('createSlotModal').classList.remove('active');
+    };
+
+    window.createSlot = function() {
+        const name = document.getElementById('newSlotName').value.trim();
+        if (!name) { alert('Please enter a slot name.'); return; }
+        const slots = loadSlotsMeta();
+        if (slots.find(s => s.name.toLowerCase() === name.toLowerCase())) {
+            alert('A slot with that name already exists.'); return;
+        }
+        const id = 'slot_' + Date.now();
+        const newSlot = {
+            id, name,
+            desc: document.getElementById('newSlotDesc').value.trim(),
+            key: window._pendingNewSlotKey,
+            createdAt: new Date().toISOString()
+        };
+        slots.push(newSlot);
+        saveSlotsMeta(slots);
+        window.closeCreateSlot();
+        showNotif('success', 'Slot Created', `"${name}" is ready. Save your key: ${newSlot.key.slice(0,8)}...`);
+        switchToSlot(id);
+    };
+
+    // ═══════════════════════════════════════════════════════════
+    //  DELETE SLOT (3-step verification)
+    // ═══════════════════════════════════════════════════════════
+
+    window.startDeleteSlot = function(slotId) {
+        const slots = loadSlotsMeta();
+        const slot = slots.find(s => s.id === slotId);
+        if (!slot) return;
+
+        if (slots.length <= 1) { alert('You cannot delete the last slot.'); return; }
+
+        window._pendingDeleteSlotId = slotId;
+        window._verifyCurrentStep = 1;
+
+        document.getElementById('verifySlotName').textContent = `"${slot.name}"`;
+        document.getElementById('verifySlotNameDisplay').textContent = slot.name;
+        document.getElementById('verifyKeyHint').textContent = 'Click to reveal key';
+        document.getElementById('verifyKeyHint').onclick = function() {
+            this.textContent = slot.key;
+            this.style.color = 'var(--danger)';
+        };
+        document.getElementById('verifyKeyInput').value = '';
+        document.getElementById('verifyNameInput').value = '';
+        document.getElementById('verifyCheck1').checked = false;
+        document.getElementById('verifyCheck2').checked = false;
+
+        setVerifyStep(1);
+        document.getElementById('slotManagerModal').classList.remove('active');
+        document.getElementById('verifyModal').classList.add('active');
+    };
+
+    function setVerifyStep(step) {
+        window._verifyCurrentStep = step;
+        [1,2,3].forEach(i => {
+            document.getElementById(`verifyStep${i}`).classList.toggle('active', i === step);
+        });
+        // Update dots
+        const dotsEl = document.getElementById('verifyStepDots');
+        dotsEl.innerHTML = [1,2,3].map(i =>
+            `<div class="verify-step-dot ${i <= step ? 'done' : ''}"></div>`
+        ).join('');
+    }
+
+    window.verifyStep1 = function() {
+        const slots = loadSlotsMeta();
+        const slot = slots.find(s => s.id === window._pendingDeleteSlotId);
+        if (!slot) return;
+        const entered = document.getElementById('verifyKeyInput').value.trim();
+        if (entered !== slot.key) {
+            shakeEl(document.getElementById('verifyKeyInput'));
+            showNotif('danger', 'Wrong Key', 'The security key does not match. Try again.');
+            return;
+        }
+        setVerifyStep(2);
+    };
+
+    window.verifyStep2 = function() {
+        const slots = loadSlotsMeta();
+        const slot = slots.find(s => s.id === window._pendingDeleteSlotId);
+        if (!slot) return;
+        const entered = document.getElementById('verifyNameInput').value.trim();
+        if (entered !== slot.name) {
+            shakeEl(document.getElementById('verifyNameInput'));
+            showNotif('danger', 'Wrong Name', 'Slot name does not match exactly.');
+            return;
+        }
+        setVerifyStep(3);
+    };
+
+    window.verifyStep3 = async function() {
+        if (!document.getElementById('verifyCheck1').checked || !document.getElementById('verifyCheck2').checked) {
+            showNotif('warning', 'Check Both Boxes', 'Please check both confirmation boxes.');
+            return;
+        }
+        await executeDeleteSlot(window._pendingDeleteSlotId);
+        window.closeVerify();
+    };
+
+    async function executeDeleteSlot(slotId) {
+        const slots = loadSlotsMeta();
+        const slot = slots.find(s => s.id === slotId);
+        if (!slot) return;
+
+        // Delete the IndexedDB database
+        try {
+            if (window.db && getCurrentSlotId() === slotId) {
+                window.db.close();
+            }
+            await Dexie.delete(dbNameForSlot(slotId));
+        } catch(e) { console.error('Error deleting slot DB:', e); }
+
+        const newSlots = slots.filter(s => s.id !== slotId);
+        saveSlotsMeta(newSlots);
+
+        // Switch to another slot if we deleted the current one
+        if (getCurrentSlotId() === slotId) {
+            await switchToSlot(newSlots[0].id);
+        } else {
+            renderSlotBar();
+        }
+
+        showNotif('success', 'Slot Deleted', `"${slot.name}" has been permanently deleted.`);
+    }
+
+    window.closeVerify = function() {
+        document.getElementById('verifyModal').classList.remove('active');
+        window._pendingDeleteSlotId = null;
+    };
+
+    // ═══════════════════════════════════════════════════════════
+    //  TRANSFER DATA
+    // ═══════════════════════════════════════════════════════════
+
+    window.openTransferModal = async function() {
+        const slots = loadSlotsMeta();
+        if (slots.length < 2) {
+            showNotif('info', 'Only One Slot', 'Create another slot first to transfer data.');
+            return;
+        }
+        const srcSel = document.getElementById('transferSource');
+        const dstSel = document.getElementById('transferDest');
+        srcSel.innerHTML = slots.map(s => `<option value="${s.id}">${escHtml(s.name)}</option>`).join('');
+        srcSel.value = getCurrentSlotId();
+        dstSel.innerHTML = slots.map(s => `<option value="${s.id}">${escHtml(s.name)}</option>`).join('');
+        // Default dest = first slot that isn't current
+        const otherSlot = slots.find(s => s.id !== getCurrentSlotId());
+        if (otherSlot) dstSel.value = otherSlot.id;
+
+        await window.loadTransferItems();
+        document.getElementById('transferModal').classList.add('active');
+    };
+    window.closeTransfer = function() {
+        document.getElementById('transferModal').classList.remove('active');
+    };
+
+    window.loadTransferItems = async function() {
+        const srcId = document.getElementById('transferSource').value;
+        const container = document.getElementById('transferItemsContainer');
+        container.innerHTML = '<div style="color:var(--text-secondary);font-size:0.85rem;">Loading...</div>';
+
+        const srcDB = await openSlotDB(srcId);
+        const categories = [
+            { key: 'notes',     label: '📝 Notes',     icon: '📝' },
+            { key: 'tasks',     label: '✓ Tasks',      icon: '✓' },
+            { key: 'events',    label: '📅 Events',    icon: '📅' },
+            { key: 'bookmarks', label: '🔖 Bookmarks', icon: '🔖' }
+        ];
+
+        let html = '';
+        for (const cat of categories) {
+            const items = await srcDB[cat.key].toArray();
+            if (items.length === 0) continue;
+            html += `
+                <div class="transfer-category-section">
+                    <div class="transfer-category-header" onclick="toggleTransferCategory('${cat.key}')">
+                        <h4>${cat.label} (${items.length})</h4>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <button class="btn btn-small btn-secondary" onclick="event.stopPropagation();selectAllTransfer('${cat.key}',true)">Select All</button>
+                            <button class="btn btn-small btn-secondary" onclick="event.stopPropagation();selectAllTransfer('${cat.key}',false)">Deselect All</button>
+                            <span id="catArrow_${cat.key}">▼</span>
+                        </div>
                     </div>
-                `;
-                return;
-            }
-            
-            body.innerHTML = '';
-            window.notificationLog.forEach((log, index) => {
-                const item = document.createElement('div');
-                item.className = `notification-log-item ${log.type}`;
-                item.innerHTML = `
-                    <div class="notification-log-icon">${log.type === 'danger' ? '⚠️' : log.type === 'warning' ? '⏰' : 'ℹ️'}</div>
-                    <div class="notification-log-content">
-                        <div class="notification-log-title">${log.title}</div>
-                        <div class="notification-log-message">${log.message}</div>
-                        <div class="notification-log-time">${log.time}</div>
+                    <div id="catItems_${cat.key}">
+                        ${items.map(item => `
+                            <div class="transfer-item-row">
+                                <input type="checkbox" id="transfer_${cat.key}_${item.id}" class="transfer-check transfer-check-${cat.key}" data-id="${item.id}" data-cat="${cat.key}">
+                                <label for="transfer_${cat.key}_${item.id}">${escHtml(item.title || item.url || 'Untitled')}</label>
+                            </div>
+                        `).join('')}
                     </div>
-                    <button class="notification-log-delete" onclick="window.deleteNotification(${index})" title="Delete notification">×</button>
-                `;
-                body.appendChild(item);
+                </div>
+            `;
+        }
+
+        srcDB.close();
+        container.innerHTML = html || '<div style="color:var(--text-secondary);padding:20px;text-align:center;">No items in this slot.</div>';
+    };
+
+    window.toggleTransferCategory = function(catKey) {
+        const el = document.getElementById('catItems_' + catKey);
+        const arrow = document.getElementById('catArrow_' + catKey);
+        const hidden = el.style.display === 'none';
+        el.style.display = hidden ? 'block' : 'none';
+        arrow.textContent = hidden ? '▼' : '▶';
+    };
+
+    window.selectAllTransfer = function(catKey, select) {
+        document.querySelectorAll(`.transfer-check-${catKey}`).forEach(cb => { cb.checked = select; });
+    };
+
+    window.executeTransfer = async function(mode) {
+        const srcId = document.getElementById('transferSource').value;
+        const dstId = document.getElementById('transferDest').value;
+
+        if (srcId === dstId) { showNotif('warning', 'Same Slot', 'Source and destination must be different slots.'); return; }
+
+        const checked = document.querySelectorAll('.transfer-check:checked');
+        if (checked.length === 0) { showNotif('info', 'Nothing Selected', 'Select at least one item to transfer.'); return; }
+
+        // Group by category
+        const byCategory = {};
+        checked.forEach(cb => {
+            if (!byCategory[cb.dataset.cat]) byCategory[cb.dataset.cat] = [];
+            byCategory[cb.dataset.cat].push(parseInt(cb.dataset.id));
+        });
+
+        const srcDB = await openSlotDB(srcId);
+        const dstDB = await openSlotDB(dstId);
+        let movedCount = 0;
+
+        for (const [cat, ids] of Object.entries(byCategory)) {
+            const items = await Promise.all(ids.map(id => srcDB[cat].get(id)));
+            const cleanItems = items.filter(Boolean).map(item => {
+                const copy = { ...item };
+                delete copy.id; // let new DB assign new id
+                return copy;
             });
-        };
+            await dstDB[cat].bulkAdd(cleanItems);
+            movedCount += cleanItems.length;
 
-        window.deleteNotification = function(index) {
-            window.notificationLog.splice(index, 1);
-            window.updateNotificationLog();
-            window.updateNotificationBadge();
-        };
-
-        window.updateNotificationBadge = function() {
-            const badge = document.getElementById('notificationBadge');
-            const bell = document.querySelector('.notification-bell');
-            
-            if (window.notificationLog.length > 0) {
-                badge.textContent = window.notificationLog.length > 99 ? '99+' : window.notificationLog.length;
-                badge.style.display = 'flex';
-                bell.classList.add('has-notifications');
-            } else {
-                badge.style.display = 'none';
-                bell.classList.remove('has-notifications');
+            if (mode === 'move') {
+                await srcDB[cat].bulkDelete(ids);
             }
-        };
+        }
 
-        window.toggleNotificationPanel = function() {
-            const panel = document.getElementById('notificationPanel');
-            panel.classList.toggle('active');
-        };
+        srcDB.close();
+        dstDB.close();
 
-        window.clearNotifications = function() {
-            if (confirm('Clear all notifications?')) {
-                window.notificationLog = [];
-                window.updateNotificationLog();
-                window.updateNotificationBadge();
-            }
-        };
+        const slots = loadSlotsMeta();
+        const dstSlot = slots.find(s => s.id === dstId);
+        showNotif('success', mode === 'move' ? 'Moved!' : 'Copied!',
+            `${movedCount} item(s) ${mode === 'move' ? 'moved' : 'copied'} to "${dstSlot?.name || 'destination'}".`);
 
-        window.checkNotifications = async function() {
-            if (!window.settings.notificationsEnabled) return;
-            
-            const now = new Date();
-            const estNow = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
-            const notifyMinutes = window.settings.eventNotifyMinutes || 30;
-            const notifyMs = notifyMinutes * 60 * 1000;
-            
-            const tasks = await window.db.tasks.toArray();
-            tasks.forEach(task => {
-                if (task.status !== 'completed' && task.dueDate) {
-                    const dueDate = new Date(task.dueDate);
-                    const timeDiff = dueDate - estNow;
-                    
-                    if (timeDiff < 0) {
-                        const hoursOverdue = Math.floor((estNow - dueDate) / (1000 * 60 * 60));
-                        window.showNotification(
-                            'danger',
-                            'Task Overdue',
-                            `"${task.title}" was due ${hoursOverdue > 24 ? Math.floor(hoursOverdue / 24) + ' days' : hoursOverdue + ' hours'} ago`,
-                            `task-overdue-${task.id}`
-                        );
-                    } else if (timeDiff <= notifyMs) {
-                        const minutesUntil = Math.floor(timeDiff / (1000 * 60));
-                        window.showNotification(
-                            'warning',
-                            'Task Due Soon',
-                            `"${task.title}" is due in ${minutesUntil} minute${minutesUntil !== 1 ? 's' : ''}`,
-                            `task-upcoming-${task.id}`
-                        );
-                    }
-                }
-            });
-            
-            const events = await window.db.events.toArray();
-            
-            events.forEach(event => {
-                if (event.start) {
-                    const startDate = new Date(event.start);
-                    const timeDiff = startDate - estNow;
-                    
-                    if (timeDiff < 0) {
-                        const minutesAgo = Math.floor((estNow - startDate) / (1000 * 60));
-                        if (minutesAgo < 60) {
-                            window.showNotification(
-                                'info',
-                                'Event In Progress',
-                                `"${event.title}" started ${minutesAgo} minute${minutesAgo !== 1 ? 's' : ''} ago`,
-                                `event-started-${event.id}`
-                            );
-                        }
-                    } else if (timeDiff <= notifyMs) {
-                        const minutesUntil = Math.floor(timeDiff / (1000 * 60));
-                        window.showNotification(
-                            'warning',
-                            'Upcoming Event',
-                            `"${event.title}" starts in ${minutesUntil} minute${minutesUntil !== 1 ? 's' : ''}`,
-                            `event-upcoming-${event.id}`
-                        );
-                    }
-                }
-            });
-        };
+        // Reload current view if current slot was affected
+        if (srcId === getCurrentSlotId() || dstId === getCurrentSlotId()) {
+            await window.renderView();
+        }
 
-        window.startNotificationSystem = function() {
-            if (window.notificationCheckInterval) {
-                clearInterval(window.notificationCheckInterval);
-            }
-            window.checkNotifications();
-            window.notificationCheckInterval = setInterval(window.checkNotifications, 30000);
-        };
-        
-        window.clearNotificationHistory = function() {
-            window.notificationHistory.clear();
-        };
-        
-        setInterval(window.clearNotificationHistory, 300000);
+        window.closeTransfer();
+    };
 
-        window.exportData = async function() {
-            const data = {
-                notes: await window.db.notes.toArray(),
-                tasks: await window.db.tasks.toArray(),
-                events: await window.db.events.toArray(),
-                bookmarks: await window.db.bookmarks.toArray()
-            };
-            
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `organizer-backup-${Date.now()}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-        };
+    // ═══════════════════════════════════════════════════════════
+    //  THEME
+    // ═══════════════════════════════════════════════════════════
 
-        window.importData = function() {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'application/json';
-            input.onchange = async (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                
-                const text = await file.text();
-                const data = JSON.parse(text);
-                
-                if (confirm('Import this data? It will be added to existing items.')) {
-                    if (data.notes) await window.db.notes.bulkAdd(data.notes);
-                    if (data.tasks) await window.db.tasks.bulkAdd(data.tasks);
-                    if (data.events) await window.db.events.bulkAdd(data.events);
-                    if (data.bookmarks) await window.db.bookmarks.bulkAdd(data.bookmarks);
-                    window.renderView();
-                    alert('Import successful!');
-                }
-            };
-            input.click();
-        };
+    window.toggleTheme = function() {
+        document.body.classList.toggle('dark-mode');
+        window.settings.theme = document.body.classList.contains('dark-mode') ? 'dark' : 'light';
+        window.db.settings.put({ ...window.settings, id: 1 });
+    };
 
-        window.openSettings = function() {
-            document.getElementById('settingsModal').classList.add('active');
-            document.getElementById('notificationsEnabled').checked = window.settings.notificationsEnabled !== false;
-            document.getElementById('eventNotifyMinutes').value = window.settings.eventNotifyMinutes || 30;
-        };
+    // ═══════════════════════════════════════════════════════════
+    //  VIEW SWITCHING
+    // ═══════════════════════════════════════════════════════════
 
-        window.closeSettings = function() {
-            document.getElementById('settingsModal').classList.remove('active');
-        };
+    window.switchView = function(view, el) {
+        window.currentView = view;
+        document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+        if (el) el.classList.add('active');
+        const titles = { notes:'Notes', tasks:'Tasks', calendar:'Calendar', bookmarks:'Bookmarks' };
+        document.getElementById('viewTitle').textContent = titles[view];
+        window.renderView();
+    };
 
-        window.saveSettings = async function() {
-            window.settings.notificationsEnabled = document.getElementById('notificationsEnabled').checked;
-            const notifyMinutes = document.getElementById('eventNotifyMinutes').value;
-            if (notifyMinutes) {
-                window.settings.eventNotifyMinutes = parseInt(notifyMinutes);
-            }
-            await window.db.settings.put({ ...window.settings, id: 1 });
-            window.closeSettings();
-            alert('Settings saved!');
-        };
+    // ═══════════════════════════════════════════════════════════
+    //  RENDER VIEW
+    // ═══════════════════════════════════════════════════════════
 
-        document.getElementById('searchBar').addEventListener('input', async (e) => {
-            const query = e.target.value.toLowerCase();
-            if (!query) {
-                window.renderView();
-                return;
-            }
-            
-            const grid = document.getElementById('contentGrid');
-            grid.innerHTML = '';
-            
+    window.renderView = async function() {
+        const grid = document.getElementById('contentGrid');
+        grid.innerHTML = '';
+        try {
             if (window.currentView === 'notes') {
-                const notes = await window.db.notes.toArray();
-                const filtered = notes.filter(n => n.title.toLowerCase().includes(query) || (n.content && n.content.toLowerCase().includes(query)));
-                filtered.forEach(note => {
-                    const card = document.createElement('div');
-                    card.className = 'card';
-                    card.onclick = () => window.editItem(note.id);
-                    card.innerHTML = `<h3>${note.title}</h3><div class="card-content">${note.content || ''}</div>`;
+                const notes = await window.db.notes.reverse().sortBy('updatedAt');
+                if (notes.length === 0) { grid.innerHTML = emptyState('📝', 'No notes yet'); return; }
+                notes.forEach(note => {
+                    const card = makeCard(note, 'note', () => window.editItem(note.id));
+                    let progressHTML = makeProgress(note);
+                    card.innerHTML = `
+                        <h3>${note.title}</h3>
+                        <div class="card-content">${note.content || ''}</div>
+                        <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:8px;">${new Date(note.updatedAt).toLocaleDateString()}</div>
+                        ${progressHTML}
+                    `;
+                    card.appendChild(makeDeleteBtn(note.id, 'notes'));
+                    grid.appendChild(card);
+                });
+            } else if (window.currentView === 'tasks') {
+                const tasks = await window.db.tasks.toArray();
+                if (tasks.length === 0) { grid.innerHTML = emptyState('✓', 'No tasks yet'); return; }
+                tasks.forEach(task => {
+                    const item = document.createElement('div');
+                    item.className = `task-item priority-${task.priority || 'low'}`;
+                    item.innerHTML = `
+                        <input type="checkbox" ${task.status === 'completed' ? 'checked' : ''} onclick="window.toggleTask(${task.id})">
+                        <div style="flex:1;">
+                            <div style="font-weight:500;cursor:pointer;" onclick="window.editItem(${task.id})">${task.title}</div>
+                            ${task.dueDate ? `<div style="font-size:0.82rem;color:var(--text-secondary);">Due: ${new Date(task.dueDate).toLocaleString()}</div>` : ''}
+                            ${makeProgress(task)}
+                        </div>
+                    `;
+                    item.appendChild(makeDeleteBtn(task.id, 'tasks'));
+                    grid.appendChild(item);
+                });
+            } else if (window.currentView === 'calendar') {
+                const events = await window.db.events.orderBy('start').toArray();
+                if (events.length === 0) { grid.innerHTML = emptyState('📅', 'No events yet'); return; }
+                events.forEach(event => {
+                    const card = makeCard(event, 'event', () => window.editItem(event.id));
+                    card.style.background = 'var(--accent)';
+                    card.style.color = 'white';
+                    card.innerHTML = `
+                        <h3>${event.title}</h3>
+                        <div style="margin-top:8px;font-size:0.88rem;">${new Date(event.start).toLocaleDateString()} → ${new Date(event.end).toLocaleDateString()}</div>
+                        ${event.description ? `<div style="margin-top:8px;opacity:0.9;font-size:0.88rem;">${event.description}</div>` : ''}
+                    `;
+                    const del = makeDeleteBtn(event.id, 'events');
+                    del.style.marginTop = '10px';
+                    card.appendChild(del);
+                    grid.appendChild(card);
+                });
+            } else if (window.currentView === 'bookmarks') {
+                const bookmarks = await window.db.bookmarks.orderBy('position').toArray();
+                if (bookmarks.length === 0) { grid.innerHTML = emptyState('🔖', 'No bookmarks yet'); return; }
+                bookmarks.forEach((bm) => {
+                    const card = makeCard(bm, 'bookmark', null);
+                    card.draggable = true;
+                    card.dataset.bookmarkId = bm.id;
+                    card.addEventListener('dragstart', handleDragStart);
+                    card.addEventListener('dragend', handleDragEnd);
+                    card.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; });
+                    card.addEventListener('dragenter', function() { if (this !== window._draggedBm) this.classList.add('drag-over'); });
+                    card.addEventListener('dragleave', function(e) { if (e.target === this) this.classList.remove('drag-over'); });
+                    card.addEventListener('drop', handleDrop);
+                    card.innerHTML = `
+                        <h3 style="pointer-events:none;">${bm.title}</h3>
+                        <a href="${bm.url}" target="_blank" style="color:var(--accent);word-break:break-all;pointer-events:auto;font-size:0.88rem;">${bm.url}</a>
+                    `;
+                    card.appendChild(makeDeleteBtn(bm.id, 'bookmarks'));
+                    const editBtn = document.createElement('button');
+                    editBtn.textContent = '✏️ Edit';
+                    editBtn.className = 'btn btn-small';
+                    editBtn.style.cssText = 'margin-top:8px;margin-left:6px;pointer-events:auto;';
+                    editBtn.onclick = (e) => { e.stopPropagation(); window.editItem(bm.id); };
+                    card.appendChild(editBtn);
                     grid.appendChild(card);
                 });
             }
-        });
+        } catch(err) { console.error('Render error:', err); }
+    };
 
-        window.addEventListener('DOMContentLoaded', async () => {
-            console.log('Page loaded, initializing...');
-            await initDB();
-            await window.renderView();
-            updateESTClock();
-            setInterval(updateESTClock, 1000);
-            window.startNotificationSystem();
-            console.log('App ready!');
-        });
+    function emptyState(icon, msg) {
+        return `<div class="empty-state" style="grid-column:1/-1;"><div class="empty-state-icon">${icon}</div><div>${msg}</div><div style="margin-top:8px;font-size:0.82rem;color:var(--text-secondary);">Click "+ New" to add one.</div></div>`;
+    }
 
-        function updateESTClock() {
-            const now = new Date();
-            const estTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
-            const hours = estTime.getHours();
-            const minutes = estTime.getMinutes().toString().padStart(2, '0');
-            const seconds = estTime.getSeconds().toString().padStart(2, '0');
-            const ampm = hours >= 12 ? 'PM' : 'AM';
-            const displayHours = hours % 12 || 12;
-            document.getElementById('estClock').textContent = `${displayHours}:${minutes}:${seconds} ${ampm} EST`;
+    function makeCard(item, type, clickFn) {
+        const card = document.createElement('div');
+        card.className = 'card';
+        if (clickFn) card.onclick = clickFn;
+        return card;
+    }
+
+    function makeDeleteBtn(id, table) {
+        const btn = document.createElement('button');
+        btn.textContent = '🗑️ Delete';
+        btn.className = 'btn btn-small btn-secondary';
+        btn.style.cssText = 'margin-top:8px;pointer-events:auto;';
+        btn.onclick = function(e) {
+            e.preventDefault(); e.stopPropagation();
+            if (confirm('Delete this item?')) {
+                window.db[table].delete(id).then(() => window.renderView());
+            }
+        };
+        return btn;
+    }
+
+    function makeProgress(item) {
+        if (item.progressCurrent === undefined || !item.progressTotal || item.progressTotal <= 0) return '';
+        const pct = Math.round((item.progressCurrent / item.progressTotal) * 100);
+        return `
+            <div class="progress-wrapper">
+                <div class="progress-label"><span>${item.progressCurrent} / ${item.progressTotal}</span><span style="font-weight:600;">${pct}%</span></div>
+                <div class="progress-bar-container"><div class="progress-bar-fill" style="width:${pct}%"></div></div>
+            </div>`;
+    }
+
+    // Drag and drop bookmarks
+    window._draggedBm = null;
+    function handleDragStart(e) {
+        window._draggedBm = this;
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+    }
+    function handleDragEnd() {
+        this.classList.remove('dragging');
+        document.querySelectorAll('.card').forEach(c => c.classList.remove('drag-over'));
+        window._draggedBm = null;
+    }
+    async function handleDrop(e) {
+        e.stopPropagation(); e.preventDefault();
+        this.classList.remove('drag-over');
+        if (window._draggedBm && window._draggedBm !== this) {
+            const id1 = parseInt(window._draggedBm.dataset.bookmarkId);
+            const id2 = parseInt(this.dataset.bookmarkId);
+            const [b1, b2] = await Promise.all([window.db.bookmarks.get(id1), window.db.bookmarks.get(id2)]);
+            if (b1 && b2) {
+                await window.db.bookmarks.update(id1, { position: b2.position || 0 });
+                await window.db.bookmarks.update(id2, { position: b1.position || 0 });
+                await window.renderView();
+            }
         }
+    }
 
-        window.toggleStrikethroughTitle = function() {
-            const selection = window.getSelection();
-            if (!selection.rangeCount || selection.isCollapsed) {
-                alert('Please select some text first');
-                return;
-            }
+    // ═══════════════════════════════════════════════════════════
+    //  CREATE / EDIT / SAVE ITEM
+    // ═══════════════════════════════════════════════════════════
 
-            const range = selection.getRangeAt(0);
-            const selectedText = range.toString();
-            
-            if (confirm(`Strikethrough this text?\n\n"${selectedText}"`)) {
-                const span = document.createElement('span');
-                span.style.textDecoration = 'line-through';
-                span.textContent = selectedText;
-                range.deleteContents();
-                range.insertNode(span);
-                selection.removeAllRanges();
-            }
-        };
+    window.createNew = function() {
+        window.currentItemId = null;
+        document.getElementById('itemModal').classList.add('active');
+        document.getElementById('itemContent').innerHTML = '';
+        document.getElementById('itemTitle').innerHTML = '';
+        document.getElementById('itemDescription').innerHTML = '';
+        document.getElementById('itemTags').value = '';
+        document.getElementById('itemUrl').value = '';
+        document.getElementById('itemDueDate').value = '';
+        document.getElementById('itemProgressCurrent').value = '';
+        document.getElementById('itemProgressTotal').value = '';
 
-        window.toggleStrikethrough = function() {
-            const selection = window.getSelection();
-            if (!selection.rangeCount || selection.isCollapsed) {
-                alert('Please select some text first');
-                return;
-            }
+        document.getElementById('contentGroup').style.display     = window.currentView === 'notes' ? 'block' : 'none';
+        document.getElementById('progressGroup').style.display    = (window.currentView === 'notes' || window.currentView === 'tasks') ? 'block' : 'none';
+        document.getElementById('descriptionGroup').style.display = window.currentView === 'calendar' ? 'block' : 'none';
+        document.getElementById('urlGroup').style.display         = window.currentView === 'bookmarks' ? 'block' : 'none';
+        document.getElementById('dueDateGroup').style.display     = window.currentView === 'tasks' ? 'block' : 'none';
+        document.getElementById('priorityGroup').style.display    = window.currentView === 'tasks' ? 'block' : 'none';
+        document.getElementById('startDateGroup').style.display   = window.currentView === 'calendar' ? 'block' : 'none';
+        document.getElementById('endDateGroup').style.display     = window.currentView === 'calendar' ? 'block' : 'none';
 
-            const range = selection.getRangeAt(0);
-            const selectedText = range.toString();
-            
-            if (confirm(`Strikethrough this text?\n\n"${selectedText}"`)) {
-                const span = document.createElement('span');
-                span.style.textDecoration = 'line-through';
-                span.textContent = selectedText;
-                range.deleteContents();
-                range.insertNode(span);
-                selection.removeAllRanges();
-            }
-        };
+        const titles = { notes:'New Note', tasks:'New Task', calendar:'New Event', bookmarks:'New Bookmark' };
+        document.getElementById('modalTitle').textContent = titles[window.currentView];
+    };
 
-        window.toggleStrikethroughDescription = function() {
-            const selection = window.getSelection();
-            if (!selection.rangeCount || selection.isCollapsed) {
-                alert('Please select some text first');
-                return;
-            }
+    window.editItem = async function(id) {
+        if (!id || isNaN(id)) return;
+        window.currentItemId = id;
+        let item;
+        if (window.currentView === 'notes')     item = await window.db.notes.get(id);
+        else if (window.currentView === 'tasks') item = await window.db.tasks.get(id);
+        else if (window.currentView === 'calendar') item = await window.db.events.get(id);
+        else if (window.currentView === 'bookmarks') item = await window.db.bookmarks.get(id);
+        if (!item) return;
 
-            const range = selection.getRangeAt(0);
-            const selectedText = range.toString();
-            
-            if (confirm(`Strikethrough this text?\n\n"${selectedText}"`)) {
-                const span = document.createElement('span');
-                span.style.textDecoration = 'line-through';
-                span.textContent = selectedText;
-                range.deleteContents();
-                range.insertNode(span);
-                selection.removeAllRanges();
-            }
-        };
+        document.getElementById('itemModal').classList.add('active');
+        document.getElementById('itemTitle').innerHTML = item.title;
+        ['contentGroup','progressGroup','descriptionGroup','urlGroup','dueDateGroup','priorityGroup','startDateGroup','endDateGroup'].forEach(id => {
+            document.getElementById(id).style.display = 'none';
+        });
 
-        window.deleteItem = async function(id) {
-            console.log('Delete called for id:', id, 'in view:', window.currentView);
-            if (!confirm("Delete this item permanently?")) return;
-            try {
-                let deleted = false;
-                if (window.currentView === 'notes') {
-                    await window.db.notes.delete(id);
-                    deleted = true;
-                }
-                else if (window.currentView === 'tasks') {
-                    await window.db.tasks.delete(id);
-                    deleted = true;
-                }
-                else if (window.currentView === 'calendar') {
-                    await window.db.events.delete(id);
-                    deleted = true;
-                }
-                else if (window.currentView === 'bookmarks') {
-                    await window.db.bookmarks.delete(id);
-                    deleted = true;
-                }
-                
-                if (deleted) {
-                    console.log('Item deleted successfully:', id);
-                    await window.renderView();
+        if (window.currentView === 'notes') {
+            document.getElementById('itemContent').innerHTML = item.content || '';
+            document.getElementById('itemProgressCurrent').value = item.progressCurrent || '';
+            document.getElementById('itemProgressTotal').value = item.progressTotal || '';
+            document.getElementById('contentGroup').style.display = 'block';
+            document.getElementById('progressGroup').style.display = 'block';
+        }
+        if (window.currentView === 'tasks') {
+            document.getElementById('itemDueDate').value = item.dueDate || '';
+            document.getElementById('itemPriority').value = item.priority || 'medium';
+            document.getElementById('itemProgressCurrent').value = item.progressCurrent || '';
+            document.getElementById('itemProgressTotal').value = item.progressTotal || '';
+            document.getElementById('dueDateGroup').style.display = 'block';
+            document.getElementById('priorityGroup').style.display = 'block';
+            document.getElementById('progressGroup').style.display = 'block';
+        }
+        if (window.currentView === 'calendar') {
+            document.getElementById('itemDescription').innerHTML = item.description || '';
+            document.getElementById('itemStartDate').value = item.start || '';
+            document.getElementById('itemEndDate').value = item.end || '';
+            document.getElementById('descriptionGroup').style.display = 'block';
+            document.getElementById('startDateGroup').style.display = 'block';
+            document.getElementById('endDateGroup').style.display = 'block';
+        }
+        if (window.currentView === 'bookmarks') {
+            document.getElementById('itemUrl').value = item.url || '';
+            document.getElementById('urlGroup').style.display = 'block';
+        }
+        document.getElementById('modalTitle').textContent = `Edit ${window.currentView.slice(0,-1)}`;
+    };
+
+    window.saveItem = async function() {
+        const titleEl = document.getElementById('itemTitle');
+        const titleText = (titleEl.innerText || titleEl.textContent || '').trim();
+        if (!titleText) { alert('Please enter a title'); return; }
+
+        const now = new Date().toISOString();
+        let item = { title: titleEl.innerHTML, updatedAt: now };
+        if (!window.currentItemId) item.createdAt = now;
+
+        try {
+            if (window.currentView === 'notes') {
+                item.content = document.getElementById('itemContent').innerHTML;
+                const pc = document.getElementById('itemProgressCurrent').value;
+                const pt = document.getElementById('itemProgressTotal').value;
+                if (pc && pt) { item.progressCurrent = parseFloat(pc); item.progressTotal = parseFloat(pt); }
+                window.currentItemId ? await window.db.notes.update(window.currentItemId, item) : await window.db.notes.add(item);
+            } else if (window.currentView === 'tasks') {
+                item.dueDate  = document.getElementById('itemDueDate').value;
+                item.priority = document.getElementById('itemPriority').value;
+                item.status   = 'pending';
+                const pc = document.getElementById('itemProgressCurrent').value;
+                const pt = document.getElementById('itemProgressTotal').value;
+                if (pc && pt) { item.progressCurrent = parseFloat(pc); item.progressTotal = parseFloat(pt); }
+                window.currentItemId ? await window.db.tasks.update(window.currentItemId, item) : await window.db.tasks.add(item);
+            } else if (window.currentView === 'calendar') {
+                item.description = document.getElementById('itemDescription').innerHTML;
+                item.start = document.getElementById('itemStartDate').value;
+                item.end   = document.getElementById('itemEndDate').value;
+                window.currentItemId ? await window.db.events.update(window.currentItemId, item) : await window.db.events.add(item);
+            } else if (window.currentView === 'bookmarks') {
+                item.url = document.getElementById('itemUrl').value;
+                if (window.currentItemId) {
+                    await window.db.bookmarks.update(window.currentItemId, item);
                 } else {
-                    console.error('No view matched for deletion');
+                    const last = await window.db.bookmarks.orderBy('position').last();
+                    item.position = last ? (last.position || 0) + 1 : 0;
+                    await window.db.bookmarks.add(item);
                 }
-            } catch (err) {
-                console.error('Error deleting:', err);
-                alert('Error deleting item: ' + err.message);
+            }
+            window.closeModal();
+            await window.renderView();
+        } catch(err) { alert('Error saving: ' + err.message); }
+    };
+
+    window.closeModal = function() { document.getElementById('itemModal').classList.remove('active'); };
+
+    window.toggleTask = async function(id) {
+        const task = await window.db.tasks.get(id);
+        await window.db.tasks.update(id, { status: task.status === 'completed' ? 'pending' : 'completed' });
+        window.renderView();
+    };
+
+    // ═══════════════════════════════════════════════════════════
+    //  STRIKETHROUGH
+    // ═══════════════════════════════════════════════════════════
+
+    function applyStrikethrough() {
+        const sel = window.getSelection();
+        if (!sel.rangeCount || sel.isCollapsed) { alert('Select some text first.'); return; }
+        const range = sel.getRangeAt(0);
+        const text = range.toString();
+        if (!text || !confirm(`Strikethrough: "${text}"`)) return;
+        const span = document.createElement('span');
+        span.style.textDecoration = 'line-through';
+        span.textContent = text;
+        range.deleteContents();
+        range.insertNode(span);
+        sel.removeAllRanges();
+    }
+    window.toggleStrikethroughTitle = applyStrikethrough;
+    window.toggleStrikethrough = applyStrikethrough;
+    window.toggleStrikethroughDescription = applyStrikethrough;
+
+    // ═══════════════════════════════════════════════════════════
+    //  NOTIFICATIONS
+    // ═══════════════════════════════════════════════════════════
+
+    function showNotif(type, title, message, uniqueId) {
+        if (uniqueId && window.notificationHistory.has(uniqueId)) return;
+        if (uniqueId) window.notificationHistory.add(uniqueId);
+
+        const container = document.getElementById('notificationContainer');
+        const notif = document.createElement('div');
+        notif.className = `notification ${type}`;
+        const icon = type === 'danger' ? '⚠️' : type === 'warning' ? '⏰' : type === 'success' ? '✅' : 'ℹ️';
+        notif.innerHTML = `
+            <span style="font-size:1.3rem;">${icon}</span>
+            <div style="flex:1;">
+                <div style="font-weight:600;font-size:0.9rem;">${title}</div>
+                <div style="font-size:0.82rem;color:var(--text-secondary);">${message}</div>
+            </div>
+            <button class="notification-close" onclick="this.parentElement.remove()">×</button>
+        `;
+        container.appendChild(notif);
+        setTimeout(() => { if (notif.parentElement) notif.remove(); }, 8000);
+    }
+    window.showNotification = showNotif;
+
+    window.checkNotifications = async function() {
+        if (!window.settings.notificationsEnabled) return;
+        const now = new Date();
+        const notifyMs = (window.settings.eventNotifyMinutes || 30) * 60000;
+
+        try {
+            const tasks = await window.db.tasks.toArray();
+            tasks.forEach(task => {
+                if (task.status !== 'completed' && task.dueDate) {
+                    const due = new Date(task.dueDate);
+                    const diff = due - now;
+                    if (diff < 0) {
+                        const h = Math.floor((now - due) / 3600000);
+                        showNotif('danger', 'Task Overdue', `"${task.title}" overdue by ${h}h`, `od-${task.id}`);
+                    } else if (diff <= notifyMs) {
+                        showNotif('warning', 'Task Due Soon', `"${task.title}" due in ${Math.floor(diff/60000)}m`, `ds-${task.id}`);
+                    }
+                }
+            });
+            const events = await window.db.events.toArray();
+            events.forEach(ev => {
+                if (ev.start) {
+                    const start = new Date(ev.start);
+                    const diff = start - now;
+                    if (diff >= 0 && diff <= notifyMs) {
+                        showNotif('warning', 'Upcoming Event', `"${ev.title}" in ${Math.floor(diff/60000)}m`, `eu-${ev.id}`);
+                    }
+                }
+            });
+        } catch(e) {}
+    };
+
+    window.startNotificationSystem = function() {
+        if (window.notificationCheckInterval) clearInterval(window.notificationCheckInterval);
+        window.checkNotifications();
+        window.notificationCheckInterval = setInterval(window.checkNotifications, 30000);
+    };
+    setInterval(() => window.notificationHistory.clear(), 300000);
+
+    // ═══════════════════════════════════════════════════════════
+    //  EXPORT / IMPORT
+    // ═══════════════════════════════════════════════════════════
+
+    window.exportData = async function() {
+        const data = {
+            notes:     await window.db.notes.toArray(),
+            tasks:     await window.db.tasks.toArray(),
+            events:    await window.db.events.toArray(),
+            bookmarks: await window.db.bookmarks.toArray()
+        };
+        const slots = loadSlotsMeta();
+        const slot = slots.find(s => s.id === getCurrentSlotId());
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `bilon-${slot?.name || 'export'}-${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    window.importData = function() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'application/json';
+        input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const text = await file.text();
+            const data = JSON.parse(text);
+            if (confirm('Import this data into the current slot?')) {
+                if (data.notes)     await window.db.notes.bulkAdd(data.notes.map(x => { delete x.id; return x; }));
+                if (data.tasks)     await window.db.tasks.bulkAdd(data.tasks.map(x => { delete x.id; return x; }));
+                if (data.events)    await window.db.events.bulkAdd(data.events.map(x => { delete x.id; return x; }));
+                if (data.bookmarks) await window.db.bookmarks.bulkAdd(data.bookmarks.map(x => { delete x.id; return x; }));
+                await window.renderView();
+                showNotif('success', 'Import Done', 'Data imported into current slot.');
             }
         };
+        input.click();
+    };
 
+    // ═══════════════════════════════════════════════════════════
+    //  SETTINGS
+    // ═══════════════════════════════════════════════════════════
+
+    window.openSettings = function() {
+        document.getElementById('settingsModal').classList.add('active');
+        document.getElementById('notificationsEnabled').checked = window.settings.notificationsEnabled !== false;
+        document.getElementById('eventNotifyMinutes').value = window.settings.eventNotifyMinutes || 30;
+    };
+    window.closeSettings = function() { document.getElementById('settingsModal').classList.remove('active'); };
+    window.saveSettings = async function() {
+        window.settings.notificationsEnabled = document.getElementById('notificationsEnabled').checked;
+        const m = document.getElementById('eventNotifyMinutes').value;
+        if (m) window.settings.eventNotifyMinutes = parseInt(m);
+        await window.db.settings.put({ ...window.settings, id: 1 });
+        window.closeSettings();
+        showNotif('success', 'Settings Saved', '');
+    };
+
+    // ═══════════════════════════════════════════════════════════
+    //  SEARCH
+    // ═══════════════════════════════════════════════════════════
+
+    document.getElementById('searchBar').addEventListener('input', async (e) => {
+        const q = e.target.value.toLowerCase();
+        if (!q) { window.renderView(); return; }
+        const grid = document.getElementById('contentGrid');
+        grid.innerHTML = '';
+        if (window.currentView === 'notes') {
+            const notes = await window.db.notes.toArray();
+            notes.filter(n => n.title.toLowerCase().includes(q) || (n.content || '').toLowerCase().includes(q))
+                 .forEach(note => {
+                    const card = makeCard(note, 'note', () => window.editItem(note.id));
+                    card.innerHTML = `<h3>${note.title}</h3><div class="card-content">${note.content || ''}</div>`;
+                    grid.appendChild(card);
+                 });
+        }
+    });
+
+    // ═══════════════════════════════════════════════════════════
+    //  CLOCK
+    // ═══════════════════════════════════════════════════════════
+
+    function updateESTClock() {
+        const now = new Date();
+        const est = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+        const h = est.getHours(), m = est.getMinutes().toString().padStart(2,'0'), s = est.getSeconds().toString().padStart(2,'0');
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        document.getElementById('estClock').textContent = `${h%12||12}:${m}:${s} ${ampm} EST`;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  UTILS
+    // ═══════════════════════════════════════════════════════════
+
+    function escHtml(str) {
+        return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function shakeEl(el) {
+        el.style.animation = 'none';
+        el.style.border = '2px solid var(--danger)';
+        setTimeout(() => { el.style.border = ''; }, 1200);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  BOOT
+    // ═══════════════════════════════════════════════════════════
+
+    window.addEventListener('DOMContentLoaded', () => {
+        initApp();
+    });
     </script>
 </body>
 </html>
